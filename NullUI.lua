@@ -1,3 +1,4 @@
+-- yomka
 local NullLibrary = {
     Theme = {
         Background = Color3.fromRGB(7, 8, 13),
@@ -1937,7 +1938,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             state = not not newValue
             tween(track, {BackgroundColor3 = state and NullLibrary.Theme.AccentSoft or NullLibrary.Theme.SurfaceAccent}, 0.18)
             tween(knob, {Position = state and UDim2.new(1, -24, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)}, 0.18)
-            self.Window.Flags[flag] = state
+            controller.Window.Flags[flag] = state
 
             if not skipCallback and options.Callback then
                 task.spawn(options.Callback, state)
@@ -2074,7 +2075,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             tween(fill, {Size = UDim2.new(alpha, 0, 1, 0)}, 0.12)
             tween(knob, {Position = UDim2.new(alpha, 0, 0.5, 0)}, 0.12)
             number.Text = string.format("%." .. tostring(decimals) .. "f", value)
-            self.Window.Flags[flag] = value
+            controller.Window.Flags[flag] = value
 
             if not skipCallback and options.Callback then
                 task.spawn(options.Callback, value)
@@ -2166,7 +2167,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             local newValue, skipCallback = normalizeSetArgs(selfOrValue, maybeValue, maybeSkip)
             value = tostring(newValue or "")
             box.Text = value
-            self.Window.Flags[flag] = value
+            controller.Window.Flags[flag] = value
 
             if not skipCallback and options.Callback then
                 task.spawn(options.Callback, value, false)
@@ -2179,7 +2180,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
 
         box.FocusLost:Connect(function(enterPressed)
             value = box.Text
-            self.Window.Flags[flag] = value
+            controller.Window.Flags[flag] = value
             if options.Callback then
                 task.spawn(options.Callback, value, enterPressed)
             end
@@ -2233,7 +2234,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             local newValue, skipCallback = normalizeSetArgs(selfOrValue, maybeValue, maybeSkip)
             selected = newValue
             label.Text = string.format("%s: %s", options.Text or "Dropdown", tostring(selected))
-            self.Window.Flags[flag] = selected
+            controller.Window.Flags[flag] = selected
 
             if not skipCallback and options.Callback then
                 task.spawn(options.Callback, selected)
