@@ -120,9 +120,47 @@ local function clampRound(value)
     return math.floor(value + 0.5)
 end
 
+local LucideIcons = nil
+
+local function getLucideIcons()
+    if LucideIcons ~= nil then
+        return LucideIcons
+    end
+
+    local ok, result = pcall(function()
+        return loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua"))()
+    end)
+
+    LucideIcons = ok and type(result) == "table" and result or false
+    return LucideIcons
+end
+
+local function resolveLucideIcon(source)
+    if type(source) ~= "string" then
+        return nil
+    end
+
+    local iconName = source:match("^lucide:(.+)$")
+    if not iconName or iconName == "" then
+        return nil
+    end
+
+    local icons = getLucideIcons()
+    if type(icons) ~= "table" then
+        return nil
+    end
+
+    return icons[string.lower(iconName)]
+end
+
 local function normalizeImage(source)
     if source == nil then
         return ""
+    end
+
+    local lucideIcon = resolveLucideIcon(source)
+    if lucideIcon then
+        return lucideIcon
     end
 
     if type(source) == "number" then
@@ -143,6 +181,26 @@ local function normalizeImage(source)
     end
 
     return source
+end
+
+local function isImageSource(source)
+    if source == nil then
+        return false
+    end
+
+    if type(source) == "number" then
+        return true
+    end
+
+    if resolveLucideIcon(source) then
+        return true
+    end
+
+    source = tostring(source)
+    return string.match(source, "^%d+$") ~= nil
+        or string.match(source, "^rbxassetid://") ~= nil
+        or string.match(source, "^rbxthumb://") ~= nil
+        or string.match(source, "^https?://") ~= nil
 end
 
 local function setImageTarget(target, source)
@@ -227,6 +285,20 @@ function NullLibrary:Notify(options)
     })
     corner(card, 11)
     stroke(card, 0.12, 1)
+    local scale = create("UIScale", {Scale = 0.95, Parent = card})
+    create("ImageLabel", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://6015897843",
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ImageTransparency = 0.72,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, 26, 1, 26),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        ZIndex = math.max(card.ZIndex - 1, 0),
+        Parent = card
+    })
 
     local line = create("Frame", {
         BackgroundColor3 = options.Color or self.Theme.AccentSoft,
@@ -234,6 +306,14 @@ function NullLibrary:Notify(options)
         Parent = card
     })
     corner(line, 999)
+
+    local progress = create("Frame", {
+        AnchorPoint = Vector2.new(0, 1),
+        BackgroundColor3 = options.Color or self.Theme.AccentSoft,
+        Position = UDim2.new(0, 0, 1, 0),
+        Size = UDim2.new(1, 0, 0, 2),
+        Parent = card
+    })
 
     local body = create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -327,11 +407,13 @@ function NullLibrary:Notify(options)
 
     card.BackgroundTransparency = 1
     line.BackgroundTransparency = 1
+    progress.BackgroundTransparency = 0.18
     body.Position = body.Position + UDim2.fromOffset(20, 0)
-    card.Position = UDim2.fromOffset(24, 0)
-    tween(card, {BackgroundTransparency = 0, Position = UDim2.fromOffset(0, 0)}, 0.28, Enum.EasingStyle.Exponential)
+    tween(card, {BackgroundTransparency = 0}, 0.26, Enum.EasingStyle.Exponential)
     tween(line, {BackgroundTransparency = 0}, 0.24)
+    tween(scale, {Scale = 1}, 0.26, Enum.EasingStyle.Exponential)
     tween(body, {Position = body.Position - UDim2.fromOffset(20, 0)}, 0.28, Enum.EasingStyle.Exponential)
+    tween(progress, {Size = UDim2.new(0, 0, 0, 2)}, options.Duration or 4.5, Enum.EasingStyle.Linear)
 
     local closed = false
     local function dismiss()
@@ -339,8 +421,10 @@ function NullLibrary:Notify(options)
             return
         end
         closed = true
-        tween(card, {BackgroundTransparency = 1, Position = UDim2.fromOffset(18, 0)}, 0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+        tween(card, {BackgroundTransparency = 1}, 0.18, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
         tween(line, {BackgroundTransparency = 1}, 0.18)
+        tween(progress, {BackgroundTransparency = 1}, 0.14)
+        tween(scale, {Scale = 0.96}, 0.18, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
         tween(body, {Position = body.Position + UDim2.fromOffset(12, 0)}, 0.18, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
         task.delay(0.2, function()
             if card and card.Parent then
@@ -411,16 +495,6 @@ function NullLibrary:CreateWindow(options)
     stroke(root, 0.1, 1)
 
     local uiScale = create("UIScale", {Scale = 1, Parent = root})
-
-    local topGlow = create("Frame", {
-        AnchorPoint = Vector2.new(0.5, 0),
-        BackgroundColor3 = self.Theme.AccentSoft,
-        BackgroundTransparency = 0.94,
-        Position = UDim2.new(0.5, 0, 0, -100),
-        Size = UDim2.fromOffset(420, 220),
-        Parent = root
-    })
-    corner(topGlow, 999)
 
     local clip = create("Frame", {
         BackgroundTransparency = 1,
@@ -583,7 +657,8 @@ function NullLibrary:CreateWindow(options)
     local floatingTabs = create("Frame", {
         BackgroundTransparency = 1,
         Visible = false,
-        Parent = clip
+        ZIndex = 8,
+        Parent = screenGui
     })
 
     local floatingTabsBar = create("Frame", {
@@ -594,6 +669,19 @@ function NullLibrary:CreateWindow(options)
     corner(floatingTabsBar, 10)
     stroke(floatingTabsBar, 0.1, 1)
     padding(floatingTabsBar, 8, 8)
+    create("ImageLabel", {
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://6015897843",
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ImageTransparency = 0.7,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.new(1, 26, 1, 26),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        ZIndex = 7,
+        Parent = floatingTabs
+    })
 
     local floatingHolder = create("Frame", {
         BackgroundTransparency = 1,
@@ -963,6 +1051,7 @@ function NullLibrary:CreateWindow(options)
         end
 
         self:_layoutChrome(mobile and "Left" or self.TabPosition)
+        self:_syncFloatingTabs()
     end
 
     function window:_setOpen(openState, instant)
@@ -978,6 +1067,7 @@ function NullLibrary:CreateWindow(options)
                 self.Root.BackgroundTransparency = 0
                 self.Root.Position = self.StoredPosition
                 uiScale.Scale = viewportSize().X < 760 and 0.92 or 1
+                self:_syncFloatingTabs()
                 return
             end
 
@@ -985,22 +1075,28 @@ function NullLibrary:CreateWindow(options)
             self.Root.Position = UDim2.new(targetPosition.X.Scale, targetPosition.X.Offset, targetPosition.Y.Scale, targetPosition.Y.Offset + 18)
             self.Root.Size = UDim2.fromOffset(self.CurrentSize.X - 26, self.CurrentSize.Y - 18)
             self.Root.BackgroundTransparency = 0.04
-            topGlow.BackgroundTransparency = 0.98
             uiScale.Scale = (viewportSize().X < 760 and 0.9 or 0.975)
             tween(self.Root, {
                 Position = targetPosition,
                 Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y),
                 BackgroundTransparency = 0
             }, 0.34, Enum.EasingStyle.Exponential)
-            tween(topGlow, {BackgroundTransparency = 0.94}, 0.38, Enum.EasingStyle.Exponential)
             tween(uiScale, {Scale = viewportSize().X < 760 and 0.92 or 1}, 0.34, Enum.EasingStyle.Exponential)
+            task.spawn(function()
+                for _ = 1, 8 do
+                    self:_syncFloatingTabs()
+                    task.wait(0.03)
+                end
+            end)
         else
             self.MobileToggle.Visible = isTouch() or viewportSize().X < 760
             self:_closePopup(true)
             settingsMenu.Visible = false
+            self.FloatingTabs.Visible = self.TabPosition == "Top" or self.TabPosition == "Bottom"
 
             if instant then
                 self.ScreenGui.Enabled = false
+                self.FloatingTabs.Visible = false
                 return
             end
 
@@ -1009,10 +1105,10 @@ function NullLibrary:CreateWindow(options)
                 Size = UDim2.fromOffset(self.CurrentSize.X - 30, self.CurrentSize.Y - 18),
                 BackgroundTransparency = 0.08
             }, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
-            tween(topGlow, {BackgroundTransparency = 0.99}, 0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
             tween(uiScale, {Scale = viewportSize().X < 760 and 0.88 or 0.965}, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
             task.delay(0.22, function()
                 if self.Root and not self.Open then
+                    self.FloatingTabs.Visible = false
                     self.ScreenGui.Enabled = false
                 end
             end)
@@ -1139,6 +1235,25 @@ function NullLibrary:CreateWindow(options)
         return popup
     end
 
+    function window:_syncFloatingTabs()
+        if not self.FloatingTabs.Visible then
+            return
+        end
+
+        local rootPos = self.Root.AbsolutePosition
+        local rootSize = self.Root.AbsoluteSize
+        local barWidth = math.max(240, rootSize.X - 120)
+        local barX = rootPos.X + math.floor((rootSize.X - barWidth) * 0.5)
+
+        if self.TabPosition == "Top" then
+            self.FloatingTabs.Position = UDim2.fromOffset(barX, rootPos.Y - 48)
+        else
+            self.FloatingTabs.Position = UDim2.fromOffset(barX, rootPos.Y + rootSize.Y + 8)
+        end
+
+        self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 40)
+    end
+
     function window:_layoutChrome(mode)
         mode = mode or self.TabPosition or "Left"
         self.TabPosition = mode
@@ -1153,7 +1268,6 @@ function NullLibrary:CreateWindow(options)
         self.SidebarHeader.Text = (mode == "Left" or mode == "Right") and (mobile and "UI" or (options.SidebarTitle or "Tabs")) or ""
 
         local top = 84
-        local height = self.CurrentSize.Y - 102
 
         if mode == "Left" then
             self.Sidebar.Position = UDim2.fromOffset(18, top)
@@ -1173,19 +1287,15 @@ function NullLibrary:CreateWindow(options)
             tabHolder.Size = UDim2.new(1, 0, 1, -24)
         elseif mode == "Bottom" then
             self.Content.Position = UDim2.fromOffset(18, top)
-            self.Content.Size = UDim2.new(1, -36, 1, -152)
+            self.Content.Size = UDim2.new(1, -36, 1, -116)
             self.FloatingTabs.Visible = true
-            self.FloatingTabs.Position = UDim2.fromOffset(18, self.CurrentSize.Y - 58)
-            self.FloatingTabs.Size = UDim2.new(1, -36, 0, 40)
             tabHolder.Parent = self.FloatingHolder
             tabHolder.Position = UDim2.fromOffset(0, 0)
             tabHolder.Size = UDim2.fromScale(1, 1)
         else
-            self.Content.Position = UDim2.fromOffset(18, 132)
-            self.Content.Size = UDim2.new(1, -36, 1, -150)
+            self.Content.Position = UDim2.fromOffset(18, 84)
+            self.Content.Size = UDim2.new(1, -36, 1, -116)
             self.FloatingTabs.Visible = true
-            self.FloatingTabs.Position = UDim2.fromOffset(18, 84)
-            self.FloatingTabs.Size = UDim2.new(1, -36, 0, 40)
             tabHolder.Parent = self.FloatingHolder
             tabHolder.Position = UDim2.fromOffset(0, 0)
             tabHolder.Size = UDim2.fromScale(1, 1)
@@ -1201,12 +1311,20 @@ function NullLibrary:CreateWindow(options)
         for _, tab in ipairs(self.Tabs) do
             tab:SetLayout(mode)
         end
+
+        task.defer(function()
+            if self.Root and self.Root.Parent then
+                self:_syncFloatingTabs()
+            end
+        end)
     end
 
     function window:CreateTab(tabOptions, maybeIcon)
         if type(tabOptions) ~= "table" then
             tabOptions = {Name = tabOptions, Icon = maybeIcon}
         end
+
+        local tabImageSource = tabOptions.Image or (isImageSource(tabOptions.Icon) and tabOptions.Icon or nil)
 
         local button = create("TextButton", {
             AutoButtonColor = false,
@@ -1223,6 +1341,12 @@ function NullLibrary:CreateWindow(options)
         })
         corner(frame, 9)
         stroke(frame, 0.15, 1)
+        create("Frame", {
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.96,
+            Size = UDim2.new(1, 0, 0, 1),
+            Parent = frame
+        })
 
         local activeLine = create("Frame", {
             BackgroundColor3 = self.Library.Theme.AccentSoft,
@@ -1243,11 +1367,11 @@ function NullLibrary:CreateWindow(options)
 
         local imageLabel = create("ImageLabel", {
             BackgroundTransparency = 1,
-            Image = normalizeImage(tabOptions.Image),
+            Image = normalizeImage(tabImageSource),
             Position = UDim2.fromOffset(6, 6),
             Size = UDim2.fromOffset(20, 20),
             ScaleType = Enum.ScaleType.Fit,
-            Visible = tabOptions.Image ~= nil,
+            Visible = tabImageSource ~= nil,
             Parent = iconWrap
         })
 
@@ -1255,7 +1379,7 @@ function NullLibrary:CreateWindow(options)
             BackgroundTransparency = 1,
             Font = Enum.Font.GothamBold,
             Size = UDim2.fromScale(1, 1),
-            Text = tabOptions.Image and "" or (tabOptions.Icon or "•"),
+            Text = tabImageSource and "" or (tabOptions.Icon or "•"),
             TextColor3 = self.Library.Theme.Text,
             TextSize = 16,
             Parent = iconWrap
@@ -1319,6 +1443,18 @@ function NullLibrary:CreateWindow(options)
             self:SelectTab(tab)
         end)
 
+        button.MouseEnter:Connect(function()
+            if self.CurrentTab ~= tab then
+                tween(frame, {BackgroundColor3 = self.Library.Theme.SurfaceAccent}, 0.14)
+            end
+        end)
+
+        button.MouseLeave:Connect(function()
+            if self.CurrentTab ~= tab then
+                tween(frame, {BackgroundColor3 = self.Library.Theme.SurfaceRaised}, 0.14)
+            end
+        end)
+
         if not self.CurrentTab then
             self:SelectTab(tab, true)
         end
@@ -1330,6 +1466,8 @@ function NullLibrary:CreateWindow(options)
         if self.CurrentTab == targetTab then
             return
         end
+
+        self.CurrentTab = targetTab
 
         for _, tab in ipairs(self.Tabs) do
             local active = tab == targetTab
@@ -1352,7 +1490,6 @@ function NullLibrary:CreateWindow(options)
             end
         end
 
-        self.CurrentTab = targetTab
     end
 
     local tabPositionChoices = {
@@ -1423,8 +1560,10 @@ function NullLibrary:CreateWindow(options)
         end
 
         local delta = input.Position - dragStart
-        root.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
-        window.StoredPosition = root.Position
+        local targetPosition = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+        window.StoredPosition = targetPosition
+        tween(root, {Position = targetPosition}, 0.12, Enum.EasingStyle.Quint)
+        window:_syncFloatingTabs()
     end)
 
     local resizing = false
@@ -1470,6 +1609,14 @@ function NullLibrary:CreateWindow(options)
             dragging = false
             resizing = false
         end
+    end)
+
+    root:GetPropertyChangedSignal("Position"):Connect(function()
+        window:_syncFloatingTabs()
+    end)
+
+    root:GetPropertyChangedSignal("Size"):Connect(function()
+        window:_syncFloatingTabs()
     end)
 
     hideButton.MouseButton1Click:Connect(function()
