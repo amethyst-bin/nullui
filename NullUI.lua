@@ -116,6 +116,41 @@ local function shallowCopy(tbl)
     return clone
 end
 
+local function clampRound(value)
+    return math.floor(value + 0.5)
+end
+
+local function normalizeImage(source)
+    if source == nil then
+        return ""
+    end
+
+    if type(source) == "number" then
+        return "rbxassetid://" .. tostring(source)
+    end
+
+    source = tostring(source)
+    if source == "" then
+        return ""
+    end
+
+    if string.match(source, "^%d+$") then
+        return "rbxassetid://" .. source
+    end
+
+    if string.match(source, "^rbxassetid://") or string.match(source, "^rbxthumb://") or string.match(source, "^https?://") then
+        return source
+    end
+
+    return source
+end
+
+local function setImageTarget(target, source)
+    if target then
+        target.Image = normalizeImage(source)
+    end
+end
+
 local Storage = {}
 do
     local function pick(...)
@@ -190,7 +225,7 @@ function NullLibrary:Notify(options)
         Size = UDim2.new(1, 0, 0, 0),
         Parent = holder
     })
-    corner(card, 18)
+    corner(card, 11)
     stroke(card, 0.12, 1)
 
     local line = create("Frame", {
@@ -203,11 +238,11 @@ function NullLibrary:Notify(options)
     local body = create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(14, 12),
-        Size = UDim2.new(1, -28, 0, 0),
+        Position = UDim2.fromOffset(16, 12),
+        Size = UDim2.new(1, -40, 0, 0),
         Parent = card
     })
-    list(body, 8, false)
+    list(body, 10, false)
 
     local header = create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -215,7 +250,8 @@ function NullLibrary:Notify(options)
         Size = UDim2.new(1, 0, 0, 0),
         Parent = body
     })
-    list(header, 10, true).VerticalAlignment = Enum.VerticalAlignment.Center
+    local headerLayout = list(header, 10, true)
+    headerLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
     local iconWrap = create("Frame", {
         BackgroundColor3 = self.Theme.SurfaceRaised,
@@ -224,11 +260,11 @@ function NullLibrary:Notify(options)
         Visible = options.Icon ~= nil or options.Image ~= nil,
         Parent = header
     })
-    corner(iconWrap, 12)
+    corner(iconWrap, 9)
 
     create("ImageLabel", {
         BackgroundTransparency = 1,
-        Image = options.Icon or options.Image or "",
+        Image = normalizeImage(options.Icon or options.Image),
         Position = UDim2.fromOffset(6, 6),
         Size = UDim2.new(1, -12, 1, -12),
         ScaleType = Enum.ScaleType.Fit,
@@ -268,12 +304,12 @@ function NullLibrary:Notify(options)
     if options.ImagePreview then
         local preview = create("ImageLabel", {
             BackgroundColor3 = self.Theme.SurfaceRaised,
-            Image = options.ImagePreview,
+            Image = normalizeImage(options.ImagePreview),
             Size = UDim2.new(1, 0, 0, mobile and 120 or 140),
             ScaleType = Enum.ScaleType.Crop,
             Parent = body
         })
-        corner(preview, 14)
+        corner(preview, 9)
     end
 
     local close = create("TextButton", {
@@ -291,10 +327,11 @@ function NullLibrary:Notify(options)
 
     card.BackgroundTransparency = 1
     line.BackgroundTransparency = 1
-    body.Position = body.Position + UDim2.fromOffset(0, 6)
-    tween(card, {BackgroundTransparency = 0}, 0.22)
+    body.Position = body.Position + UDim2.fromOffset(20, 0)
+    card.Position = UDim2.fromOffset(24, 0)
+    tween(card, {BackgroundTransparency = 0, Position = UDim2.fromOffset(0, 0)}, 0.28, Enum.EasingStyle.Exponential)
     tween(line, {BackgroundTransparency = 0}, 0.24)
-    tween(body, {Position = body.Position - UDim2.fromOffset(0, 6)}, 0.24)
+    tween(body, {Position = body.Position - UDim2.fromOffset(20, 0)}, 0.28, Enum.EasingStyle.Exponential)
 
     local closed = false
     local function dismiss()
@@ -302,8 +339,9 @@ function NullLibrary:Notify(options)
             return
         end
         closed = true
-        tween(card, {BackgroundTransparency = 1}, 0.18)
+        tween(card, {BackgroundTransparency = 1, Position = UDim2.fromOffset(18, 0)}, 0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
         tween(line, {BackgroundTransparency = 1}, 0.18)
+        tween(body, {Position = body.Position + UDim2.fromOffset(12, 0)}, 0.18, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
         task.delay(0.2, function()
             if card and card.Parent then
                 card:Destroy()
@@ -325,7 +363,7 @@ function NullLibrary:_createCardButton(parent, height)
         Text = "",
         Parent = parent
     })
-    corner(button, 14)
+    corner(button, 9)
     stroke(button, 0.15, 1)
 
     button.MouseEnter:Connect(function()
@@ -355,10 +393,10 @@ function NullLibrary:CreateWindow(options)
         Parent = PlayerGui
     })
 
-    local blurBack = create("Frame", {
-        BackgroundColor3 = self.Theme.Background,
-        BackgroundTransparency = 0.2,
+    local popupLayer = create("Frame", {
+        BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
+        ZIndex = 20,
         Parent = screenGui
     })
 
@@ -369,7 +407,7 @@ function NullLibrary:CreateWindow(options)
         Size = UDim2.fromOffset(780, 520),
         Parent = screenGui
     })
-    corner(root, 24)
+    corner(root, 12)
     stroke(root, 0.1, 1)
 
     local uiScale = create("UIScale", {Scale = 1, Parent = root})
@@ -390,7 +428,7 @@ function NullLibrary:CreateWindow(options)
         Size = UDim2.fromScale(1, 1),
         Parent = root
     })
-    corner(clip, 24)
+    corner(clip, 12)
 
     local topbar = create("Frame", {
         BackgroundTransparency = 1,
@@ -409,13 +447,13 @@ function NullLibrary:CreateWindow(options)
     local titleIcon = create("ImageLabel", {
         BackgroundColor3 = self.Theme.SurfaceRaised,
         BackgroundTransparency = options.Icon and 0 or 1,
-        Image = options.Icon or "",
+        Image = normalizeImage(options.Icon),
         Size = UDim2.fromOffset(44, 44),
         ScaleType = Enum.ScaleType.Fit,
         Visible = options.Icon ~= nil,
         Parent = leftHeader
     })
-    corner(titleIcon, 14)
+    corner(titleIcon, 9)
 
     local titleWrap = create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -451,7 +489,7 @@ function NullLibrary:CreateWindow(options)
         AnchorPoint = Vector2.new(1, 0),
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -18, 0, 16),
-        Size = UDim2.fromOffset(110, 40),
+        Size = UDim2.fromOffset(152, 40),
         Parent = clip
     })
     local controlsLayout = list(controls, 8, true)
@@ -463,7 +501,7 @@ function NullLibrary:CreateWindow(options)
         Size = UDim2.fromOffset(68, 36),
         Parent = controls
     })
-    corner(badge, 14)
+    corner(badge, 9)
     stroke(badge, 0.12, 1)
 
     create("TextLabel", {
@@ -476,6 +514,19 @@ function NullLibrary:CreateWindow(options)
         Parent = badge
     })
 
+    local settingsButton = create("TextButton", {
+        AutoButtonColor = false,
+        BackgroundColor3 = self.Theme.SurfaceRaised,
+        Size = UDim2.fromOffset(36, 36),
+        Text = "[]",
+        TextColor3 = self.Theme.Muted,
+        TextSize = 15,
+        Font = Enum.Font.GothamBold,
+        Parent = controls
+    })
+    corner(settingsButton, 9)
+    stroke(settingsButton, 0.12, 1)
+
     local hideButton = create("TextButton", {
         AutoButtonColor = false,
         BackgroundColor3 = self.Theme.SurfaceRaised,
@@ -486,7 +537,7 @@ function NullLibrary:CreateWindow(options)
         Font = Enum.Font.GothamBold,
         Parent = controls
     })
-    corner(hideButton, 14)
+    corner(hideButton, 9)
     stroke(hideButton, 0.12, 1)
 
     local sidebar = create("Frame", {
@@ -495,7 +546,7 @@ function NullLibrary:CreateWindow(options)
         Size = UDim2.new(0, 190, 1, -102),
         Parent = clip
     })
-    corner(sidebar, 22)
+    corner(sidebar, 10)
     stroke(sidebar, 0.1, 1)
     padding(sidebar, 12, 12)
 
@@ -524,10 +575,61 @@ function NullLibrary:CreateWindow(options)
         Size = UDim2.new(1, -238, 1, -102),
         Parent = clip
     })
-    corner(content, 22)
+    corner(content, 10)
     stroke(content, 0.1, 1)
 
     local pages = create("Folder", {Name = "Pages", Parent = content})
+
+    local floatingTabs = create("Frame", {
+        BackgroundTransparency = 1,
+        Visible = false,
+        Parent = clip
+    })
+
+    local floatingTabsBar = create("Frame", {
+        BackgroundColor3 = self.Theme.SurfaceSoft,
+        Size = UDim2.fromScale(1, 1),
+        Parent = floatingTabs
+    })
+    corner(floatingTabsBar, 10)
+    stroke(floatingTabsBar, 0.1, 1)
+    padding(floatingTabsBar, 8, 8)
+
+    local floatingHolder = create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Parent = floatingTabsBar
+    })
+    local floatingLayout = list(floatingHolder, 8, true)
+    floatingLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    floatingLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+    local settingsMenu = create("Frame", {
+        AnchorPoint = Vector2.new(1, 0),
+        BackgroundColor3 = self.Theme.SurfaceSoft,
+        Position = UDim2.new(1, -18, 0, 60),
+        Size = UDim2.fromOffset(170, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Visible = false,
+        ZIndex = 15,
+        Parent = clip
+    })
+    corner(settingsMenu, 10)
+    stroke(settingsMenu, 0.1, 1)
+    padding(settingsMenu, 8, 8)
+    list(settingsMenu, 6, false)
+
+    local settingsTitle = create("TextLabel", {
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        Size = UDim2.new(1, 0, 0, 16),
+        Text = "Tab Position",
+        TextColor3 = self.Theme.Muted,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 16,
+        Parent = settingsMenu
+    })
 
     local resizeHandle = create("TextButton", {
         AnchorPoint = Vector2.new(1, 1),
@@ -556,13 +658,13 @@ function NullLibrary:CreateWindow(options)
         AnchorPoint = Vector2.new(0, 1),
         AutoButtonColor = false,
         BackgroundColor3 = self.Theme.SurfaceSoft,
-        Image = options.MobileToggleIcon or options.Icon or "",
+        Image = normalizeImage(options.MobileToggleIcon or options.Icon),
         Position = UDim2.new(0, 12, 1, -12),
         Size = UDim2.fromOffset(56, 56),
         Visible = false,
         Parent = screenGui
     })
-    corner(mobileToggle, 18)
+    corner(mobileToggle, 10)
     stroke(mobileToggle, 0.1, 1)
 
     if mobileToggle.Image == "" then
@@ -581,11 +683,14 @@ function NullLibrary:CreateWindow(options)
         Library = self,
         ScreenGui = screenGui,
         Root = root,
-        BlurBack = blurBack,
+        PopupLayer = popupLayer,
         Sidebar = sidebar,
         Content = content,
         Pages = pages,
         TabHolder = tabHolder,
+        FloatingTabs = floatingTabs,
+        FloatingHolder = floatingHolder,
+        TabPosition = options.TabPosition or "Left",
         Tabs = {},
         CurrentTab = nil,
         MinSize = options.MinSize or Vector2.new(420, 340),
@@ -593,6 +698,7 @@ function NullLibrary:CreateWindow(options)
         CurrentSize = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(780, 520),
         UserResized = false,
         Open = true,
+        StoredPosition = options.Position or UDim2.fromScale(0.5, 0.5),
         ToggleKey = options.ToggleKey or Enum.KeyCode.RightControl,
         Elements = {},
         Flags = {},
@@ -603,6 +709,14 @@ function NullLibrary:CreateWindow(options)
         TitleLabel = title,
         SubtitleLabel = subtitle,
         TitleIcon = titleIcon,
+        SettingsButton = settingsButton,
+        SettingsMenu = settingsMenu,
+        Topbar = topbar,
+        SidebarHeader = sidebarHeader,
+        FloatingLayout = floatingLayout,
+        _activePopup = nil,
+        _activePopupAnchor = nil,
+        _popupConnections = {},
     }, Window)
 
     function window:_configDirectory()
@@ -832,27 +946,23 @@ function NullLibrary:CreateWindow(options)
         end
 
         self.Root.Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y)
+        self.Root.Position = self.StoredPosition
         self.MobileToggle.Visible = mobile and not self.Open
         hideButton.Visible = not mobile
+        settingsButton.Visible = not mobile
         resizeHandle.Visible = not mobile
 
         if mobile then
             uiScale.Scale = 0.92
-            sidebar.Size = UDim2.new(0, 98, 1, -102)
-            content.Position = UDim2.fromOffset(128, 84)
-            content.Size = UDim2.new(1, -146, 1, -102)
-            sidebarHeader.Text = "UI"
             title.TextSize = 22
             subtitle.TextSize = 12
         else
             uiScale.Scale = 1
-            sidebar.Size = UDim2.new(0, 190, 1, -102)
-            content.Position = UDim2.fromOffset(220, 84)
-            content.Size = UDim2.new(1, -238, 1, -102)
-            sidebarHeader.Text = options.SidebarTitle or "Tabs"
             title.TextSize = 24
             subtitle.TextSize = 13
         end
+
+        self:_layoutChrome(mobile and "Left" or self.TabPosition)
     end
 
     function window:_setOpen(openState, instant)
@@ -861,30 +971,47 @@ function NullLibrary:CreateWindow(options)
         if openState then
             self.ScreenGui.Enabled = true
             self.MobileToggle.Visible = false
+            self:_closePopup(true)
 
             if instant then
                 self.Root.Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y)
-                self.BlurBack.BackgroundTransparency = 0.2
                 self.Root.BackgroundTransparency = 0
+                self.Root.Position = self.StoredPosition
+                uiScale.Scale = viewportSize().X < 760 and 0.92 or 1
                 return
             end
 
-            self.Root.Size = UDim2.fromOffset(self.CurrentSize.X * 0.94, self.CurrentSize.Y * 0.92)
-            self.Root.BackgroundTransparency = 0.08
-            self.BlurBack.BackgroundTransparency = 1
-            tween(self.Root, {Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y), BackgroundTransparency = 0}, 0.24)
-            tween(self.BlurBack, {BackgroundTransparency = 0.2}, 0.2)
+            local targetPosition = self.StoredPosition
+            self.Root.Position = UDim2.new(targetPosition.X.Scale, targetPosition.X.Offset, targetPosition.Y.Scale, targetPosition.Y.Offset + 18)
+            self.Root.Size = UDim2.fromOffset(self.CurrentSize.X - 26, self.CurrentSize.Y - 18)
+            self.Root.BackgroundTransparency = 0.04
+            topGlow.BackgroundTransparency = 0.98
+            uiScale.Scale = (viewportSize().X < 760 and 0.9 or 0.975)
+            tween(self.Root, {
+                Position = targetPosition,
+                Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y),
+                BackgroundTransparency = 0
+            }, 0.34, Enum.EasingStyle.Exponential)
+            tween(topGlow, {BackgroundTransparency = 0.94}, 0.38, Enum.EasingStyle.Exponential)
+            tween(uiScale, {Scale = viewportSize().X < 760 and 0.92 or 1}, 0.34, Enum.EasingStyle.Exponential)
         else
             self.MobileToggle.Visible = isTouch() or viewportSize().X < 760
+            self:_closePopup(true)
+            settingsMenu.Visible = false
 
             if instant then
                 self.ScreenGui.Enabled = false
                 return
             end
 
-            tween(self.Root, {Size = UDim2.fromOffset(self.CurrentSize.X * 0.95, self.CurrentSize.Y * 0.92), BackgroundTransparency = 0.08}, 0.18)
-            tween(self.BlurBack, {BackgroundTransparency = 1}, 0.18)
-            task.delay(0.18, function()
+            tween(self.Root, {
+                Position = UDim2.new(self.Root.Position.X.Scale, self.Root.Position.X.Offset, self.Root.Position.Y.Scale, self.Root.Position.Y.Offset + 16),
+                Size = UDim2.fromOffset(self.CurrentSize.X - 30, self.CurrentSize.Y - 18),
+                BackgroundTransparency = 0.08
+            }, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+            tween(topGlow, {BackgroundTransparency = 0.99}, 0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+            tween(uiScale, {Scale = viewportSize().X < 760 and 0.88 or 0.965}, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+            task.delay(0.22, function()
                 if self.Root and not self.Open then
                     self.ScreenGui.Enabled = false
                 end
@@ -906,7 +1033,7 @@ function NullLibrary:CreateWindow(options)
     function window:SetTitle(text, iconImage)
         self.TitleLabel.Text = text or self.TitleLabel.Text
         if iconImage ~= nil then
-            self.TitleIcon.Image = iconImage
+            self.TitleIcon.Image = normalizeImage(iconImage)
             self.TitleIcon.Visible = iconImage ~= ""
             self.TitleIcon.BackgroundTransparency = iconImage ~= "" and 0 or 1
         end
@@ -916,8 +1043,164 @@ function NullLibrary:CreateWindow(options)
         self.SubtitleLabel.Text = text or self.SubtitleLabel.Text
     end
 
+    function window:SetTabPosition(position)
+        self:_layoutChrome(position)
+    end
+
     function window:Destroy()
         self.ScreenGui:Destroy()
+    end
+
+    function window:_disconnectPopupConnections()
+        for _, connection in ipairs(self._popupConnections) do
+            if connection and connection.Disconnect then
+                connection:Disconnect()
+            end
+        end
+        table.clear(self._popupConnections)
+    end
+
+    function window:_closePopup(skipDestroy)
+        self:_disconnectPopupConnections()
+        if self._activePopup then
+            local popup = self._activePopup
+            self._activePopup = nil
+            self._activePopupAnchor = nil
+            if skipDestroy then
+                popup:Destroy()
+            else
+                tween(popup, {BackgroundTransparency = 1, Size = UDim2.fromOffset(popup.AbsoluteSize.X, math.max(24, popup.AbsoluteSize.Y - 12))}, 0.16, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+                task.delay(0.17, function()
+                    if popup and popup.Parent then
+                        popup:Destroy()
+                    end
+                end)
+            end
+        end
+    end
+
+    function window:_createPopup(width, height, anchorGui, offset)
+        self:_closePopup(true)
+
+        local popup = create("Frame", {
+            BackgroundColor3 = self.Library.Theme.SurfaceSoft,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(width, math.max(height - 12, 20)),
+            ZIndex = 30,
+            Parent = self.PopupLayer
+        })
+        corner(popup, 10)
+        stroke(popup, 0.1, 1)
+        popup.ClipsDescendants = true
+
+        local anchorPosition = anchorGui.AbsolutePosition
+        local anchorSize = anchorGui.AbsoluteSize
+        local screenSize = viewportSize()
+        local resolvedOffset = offset or Vector2.new(10, 0)
+        local targetX = anchorPosition.X + anchorSize.X + resolvedOffset.X
+        local targetY = anchorPosition.Y + resolvedOffset.Y
+
+        if targetX + width > screenSize.X - 12 then
+            targetX = anchorPosition.X - width - 10
+        end
+        targetX = math.clamp(targetX, 12, math.max(12, screenSize.X - width - 12))
+        targetY = math.clamp(targetY, 12, math.max(12, screenSize.Y - height - 12))
+
+        popup.Position = UDim2.fromOffset(targetX - 14, targetY)
+        tween(popup, {
+            BackgroundTransparency = 0,
+            Position = UDim2.fromOffset(targetX, targetY),
+            Size = UDim2.fromOffset(width, height)
+        }, 0.2, Enum.EasingStyle.Exponential)
+
+        self._activePopup = popup
+        self._activePopupAnchor = anchorGui
+        table.insert(self._popupConnections, UIS.InputBegan:Connect(function(input, processed)
+            if processed then
+                return
+            end
+
+            local userType = input.UserInputType
+            if userType ~= Enum.UserInputType.MouseButton1 and userType ~= Enum.UserInputType.Touch then
+                return
+            end
+
+            local pos = input.Position
+            local insidePopup = pos.X >= popup.AbsolutePosition.X and pos.X <= popup.AbsolutePosition.X + popup.AbsoluteSize.X
+                and pos.Y >= popup.AbsolutePosition.Y and pos.Y <= popup.AbsolutePosition.Y + popup.AbsoluteSize.Y
+            local insideAnchor = pos.X >= anchorGui.AbsolutePosition.X and pos.X <= anchorGui.AbsolutePosition.X + anchorGui.AbsoluteSize.X
+                and pos.Y >= anchorGui.AbsolutePosition.Y and pos.Y <= anchorGui.AbsolutePosition.Y + anchorGui.AbsoluteSize.Y
+
+            if not insidePopup and not insideAnchor then
+                self:_closePopup()
+            end
+        end))
+
+        return popup
+    end
+
+    function window:_layoutChrome(mode)
+        mode = mode or self.TabPosition or "Left"
+        self.TabPosition = mode
+
+        local mobile = viewportSize().X < 760 or isTouch()
+        if mobile then
+            mode = "Left"
+        end
+
+        self.FloatingTabs.Visible = false
+        self.Sidebar.Visible = mode == "Left" or mode == "Right"
+        self.SidebarHeader.Text = (mode == "Left" or mode == "Right") and (mobile and "UI" or (options.SidebarTitle or "Tabs")) or ""
+
+        local top = 84
+        local height = self.CurrentSize.Y - 102
+
+        if mode == "Left" then
+            self.Sidebar.Position = UDim2.fromOffset(18, top)
+            self.Sidebar.Size = mobile and UDim2.new(0, 98, 1, -102) or UDim2.new(0, 190, 1, -102)
+            self.Content.Position = mobile and UDim2.fromOffset(128, top) or UDim2.fromOffset(220, top)
+            self.Content.Size = mobile and UDim2.new(1, -146, 1, -102) or UDim2.new(1, -238, 1, -102)
+            tabHolder.Parent = self.Sidebar
+            tabHolder.Position = UDim2.fromOffset(0, 24)
+            tabHolder.Size = UDim2.new(1, 0, 1, -24)
+        elseif mode == "Right" then
+            self.Sidebar.Position = UDim2.new(1, mobile and -110 or -202, 0, top)
+            self.Sidebar.Size = mobile and UDim2.new(0, 98, 1, -102) or UDim2.new(0, 190, 1, -102)
+            self.Content.Position = UDim2.fromOffset(18, top)
+            self.Content.Size = mobile and UDim2.new(1, -146, 1, -102) or UDim2.new(1, -238, 1, -102)
+            tabHolder.Parent = self.Sidebar
+            tabHolder.Position = UDim2.fromOffset(0, 24)
+            tabHolder.Size = UDim2.new(1, 0, 1, -24)
+        elseif mode == "Bottom" then
+            self.Content.Position = UDim2.fromOffset(18, top)
+            self.Content.Size = UDim2.new(1, -36, 1, -152)
+            self.FloatingTabs.Visible = true
+            self.FloatingTabs.Position = UDim2.fromOffset(18, self.CurrentSize.Y - 58)
+            self.FloatingTabs.Size = UDim2.new(1, -36, 0, 40)
+            tabHolder.Parent = self.FloatingHolder
+            tabHolder.Position = UDim2.fromOffset(0, 0)
+            tabHolder.Size = UDim2.fromScale(1, 1)
+        else
+            self.Content.Position = UDim2.fromOffset(18, 132)
+            self.Content.Size = UDim2.new(1, -36, 1, -150)
+            self.FloatingTabs.Visible = true
+            self.FloatingTabs.Position = UDim2.fromOffset(18, 84)
+            self.FloatingTabs.Size = UDim2.new(1, -36, 0, 40)
+            tabHolder.Parent = self.FloatingHolder
+            tabHolder.Position = UDim2.fromOffset(0, 0)
+            tabHolder.Size = UDim2.fromScale(1, 1)
+        end
+
+        local layoutObject = tabHolder:FindFirstChildOfClass("UIListLayout")
+        if layoutObject then
+            local horizontalTabs = mode == "Bottom" or mode == "Top"
+            layoutObject.FillDirection = horizontalTabs and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
+            layoutObject.HorizontalAlignment = horizontalTabs and Enum.HorizontalAlignment.Center or Enum.HorizontalAlignment.Left
+        end
+
+        for _, tab in ipairs(self.Tabs) do
+            tab:SetLayout(mode)
+        end
     end
 
     function window:CreateTab(tabOptions, maybeIcon)
@@ -938,7 +1221,7 @@ function NullLibrary:CreateWindow(options)
             Size = UDim2.fromScale(1, 1),
             Parent = button
         })
-        corner(frame, 16)
+        corner(frame, 9)
         stroke(frame, 0.15, 1)
 
         local activeLine = create("Frame", {
@@ -956,11 +1239,11 @@ function NullLibrary:CreateWindow(options)
             Size = UDim2.fromOffset(32, 32),
             Parent = frame
         })
-        corner(iconWrap, 10)
+        corner(iconWrap, 8)
 
-        create("ImageLabel", {
+        local imageLabel = create("ImageLabel", {
             BackgroundTransparency = 1,
-            Image = tabOptions.Image or "",
+            Image = normalizeImage(tabOptions.Image),
             Position = UDim2.fromOffset(6, 6),
             Size = UDim2.fromOffset(20, 20),
             ScaleType = Enum.ScaleType.Fit,
@@ -968,7 +1251,7 @@ function NullLibrary:CreateWindow(options)
             Parent = iconWrap
         })
 
-        create("TextLabel", {
+        local glyphLabel = create("TextLabel", {
             BackgroundTransparency = 1,
             Font = Enum.Font.GothamBold,
             Size = UDim2.fromScale(1, 1),
@@ -990,7 +1273,7 @@ function NullLibrary:CreateWindow(options)
             Parent = frame
         })
 
-        create("TextLabel", {
+        local descriptionLabel = create("TextLabel", {
             BackgroundTransparency = 1,
             Font = Enum.Font.GothamMedium,
             Position = UDim2.fromOffset(52, 27),
@@ -1017,8 +1300,20 @@ function NullLibrary:CreateWindow(options)
         })
         list(page, 12, false)
 
-        local tab = setmetatable({Window = self, Button = button, Frame = frame, Label = label, ActiveLine = activeLine, IconWrap = iconWrap, Page = page}, Tab)
+        local tab = setmetatable({
+            Window = self,
+            Button = button,
+            Frame = frame,
+            Label = label,
+            Description = descriptionLabel,
+            ActiveLine = activeLine,
+            IconWrap = iconWrap,
+            ImageLabel = imageLabel,
+            GlyphLabel = glyphLabel,
+            Page = page
+        }, Tab)
         table.insert(self.Tabs, tab)
+        tab:SetLayout(self.TabPosition)
 
         button.MouseButton1Click:Connect(function()
             self:SelectTab(tab)
@@ -1043,10 +1338,11 @@ function NullLibrary:CreateWindow(options)
             tween(tab.IconWrap, {BackgroundColor3 = active and self.Library.Theme.AccentSoft or self.Library.Theme.SurfaceAccent}, instant and 0 or 0.18)
             tween(tab.ActiveLine, {BackgroundTransparency = active and 0 or 1, Size = active and UDim2.fromOffset(26, 2) or UDim2.fromOffset(12, 2)}, instant and 0 or 0.18)
             tab.Label.TextColor3 = active and self.Library.Theme.Text or self.Library.Theme.Muted
+            tab.GlyphLabel.TextColor3 = active and self.Library.Theme.Surface or self.Library.Theme.Text
 
             if active then
-                tab.Page.Position = UDim2.fromOffset(24, 16)
-                tween(tab.Page, {Position = UDim2.fromOffset(16, 16)}, instant and 0 or 0.2)
+                tab.Page.Position = UDim2.fromOffset(32, 16)
+                tween(tab.Page, {Position = UDim2.fromOffset(16, 16)}, instant and 0 or 0.24, Enum.EasingStyle.Exponential)
             else
                 task.delay(instant and 0 or 0.12, function()
                     if tab.Page and self.CurrentTab ~= tab then
@@ -1057,6 +1353,43 @@ function NullLibrary:CreateWindow(options)
         end
 
         self.CurrentTab = targetTab
+    end
+
+    local tabPositionChoices = {
+        {Label = "Left", Value = "Left"},
+        {Label = "Right", Value = "Right"},
+        {Label = "Bottom", Value = "Bottom"},
+        {Label = "Top", Value = "Top"},
+    }
+
+    for _, choice in ipairs(tabPositionChoices) do
+        local optionButton = create("TextButton", {
+            AutoButtonColor = false,
+            BackgroundColor3 = self.Theme.SurfaceRaised,
+            Size = UDim2.new(1, 0, 0, 32),
+            Text = "",
+            ZIndex = 16,
+            Parent = settingsMenu
+        })
+        corner(optionButton, 8)
+
+        create("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamSemibold,
+            Position = UDim2.fromOffset(10, 0),
+            Size = UDim2.new(1, -20, 1, 0),
+            Text = choice.Label,
+            TextColor3 = self.Theme.Text,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 17,
+            Parent = optionButton
+        })
+
+        optionButton.MouseButton1Click:Connect(function()
+            settingsMenu.Visible = false
+            window:_layoutChrome(choice.Value)
+        end)
     end
     local dragging = false
     local dragStart
@@ -1091,6 +1424,7 @@ function NullLibrary:CreateWindow(options)
 
         local delta = input.Position - dragStart
         root.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+        window.StoredPosition = root.Position
     end)
 
     local resizing = false
@@ -1142,6 +1476,11 @@ function NullLibrary:CreateWindow(options)
         window:Toggle(false)
     end)
 
+    settingsButton.MouseButton1Click:Connect(function()
+        window:_closePopup(true)
+        settingsMenu.Visible = not settingsMenu.Visible
+    end)
+
     mobileToggle.MouseButton1Click:Connect(function()
         window:Toggle(true)
     end)
@@ -1153,6 +1492,18 @@ function NullLibrary:CreateWindow(options)
 
         if input.KeyCode == window.ToggleKey then
             window:Toggle()
+            return
+        end
+
+        if settingsMenu.Visible then
+            local pos = input.Position
+            local insideSettings = pos.X >= settingsMenu.AbsolutePosition.X and pos.X <= settingsMenu.AbsolutePosition.X + settingsMenu.AbsoluteSize.X
+                and pos.Y >= settingsMenu.AbsolutePosition.Y and pos.Y <= settingsMenu.AbsolutePosition.Y + settingsMenu.AbsoluteSize.Y
+            local insideButton = pos.X >= settingsButton.AbsolutePosition.X and pos.X <= settingsButton.AbsolutePosition.X + settingsButton.AbsoluteSize.X
+                and pos.Y >= settingsButton.AbsolutePosition.Y and pos.Y <= settingsButton.AbsolutePosition.Y + settingsButton.AbsoluteSize.Y
+            if not insideSettings and not insideButton then
+                settingsMenu.Visible = false
+            end
         end
     end)
 
@@ -1174,6 +1525,38 @@ function NullLibrary:CreateWindow(options)
     return window
 end
 
+function Tab:SetLayout(mode)
+    local horizontal = mode == "Bottom" or mode == "Top"
+    self.Button.Size = horizontal and UDim2.fromOffset(170, 40) or UDim2.new(1, 0, 0, 52)
+    self.Frame.Size = UDim2.fromScale(1, 1)
+
+    if horizontal then
+        self.IconWrap.Position = UDim2.fromOffset(8, 8)
+        self.IconWrap.Size = UDim2.fromOffset(24, 24)
+        self.ImageLabel.Position = UDim2.fromOffset(4, 4)
+        self.ImageLabel.Size = UDim2.fromOffset(16, 16)
+        self.GlyphLabel.TextSize = 13
+        self.Label.Position = UDim2.fromOffset(40, 0)
+        self.Label.Size = UDim2.new(1, -50, 1, 0)
+        self.Label.TextSize = 13
+        self.Description.Visible = false
+        self.ActiveLine.Position = UDim2.new(0.5, 0, 1, -4)
+        self.ActiveLine.AnchorPoint = Vector2.new(0.5, 0)
+    else
+        self.IconWrap.Position = UDim2.fromOffset(10, 10)
+        self.IconWrap.Size = UDim2.fromOffset(32, 32)
+        self.ImageLabel.Position = UDim2.fromOffset(6, 6)
+        self.ImageLabel.Size = UDim2.fromOffset(20, 20)
+        self.GlyphLabel.TextSize = 16
+        self.Label.Position = UDim2.fromOffset(52, 9)
+        self.Label.Size = UDim2.new(1, -62, 0, 18)
+        self.Label.TextSize = 14
+        self.Description.Visible = self.Description.Text ~= ""
+        self.ActiveLine.Position = UDim2.fromOffset(10, 25)
+        self.ActiveLine.AnchorPoint = Vector2.new(0, 0)
+    end
+end
+
 function Tab:CreateSection(sectionOptions, maybeDescription)
     if type(sectionOptions) ~= "table" then
         sectionOptions = {Title = sectionOptions, Description = maybeDescription}
@@ -1185,7 +1568,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         Size = UDim2.new(1, 0, 0, 0),
         Parent = self.Page
     })
-    corner(card, 18)
+    corner(card, 10)
     stroke(card, 0.12, 1)
     padding(card, 16, 16)
 
@@ -1248,7 +1631,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             Size = UDim2.new(1, 0, 0, 0),
             Parent = holder
         })
-        corner(paragraph, 14)
+        corner(paragraph, 9)
         padding(paragraph, 14, 12)
 
         autosizeText(create("TextLabel", {
@@ -1286,18 +1669,18 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             Size = UDim2.new(1, 0, 0, 0),
             Parent = holder
         })
-        corner(frame, 14)
+        corner(frame, 9)
         stroke(frame, 0.15, 1)
         padding(frame, 10, 10)
 
         local image = create("ImageLabel", {
             BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
-            Image = options.Image or "",
+            Image = normalizeImage(options.Image or options.Url or options.ID),
             Size = UDim2.new(1, 0, 0, options.Height or 140),
             ScaleType = options.ScaleType or Enum.ScaleType.Crop,
             Parent = frame
         })
-        corner(image, options.CornerRadius or 12)
+        corner(image, options.CornerRadius or 8)
 
         if options.Caption and options.Caption ~= "" then
             autosizeText(create("TextLabel", {
@@ -1322,7 +1705,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
 
         create("ImageLabel", {
             BackgroundTransparency = 1,
-            Image = options.Icon or "",
+            Image = normalizeImage(options.Icon),
             Position = UDim2.fromOffset(12, 11),
             Size = UDim2.fromOffset(20, 20),
             ScaleType = Enum.ScaleType.Fit,
@@ -1434,13 +1817,15 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         local maximum = options.Max or 100
         local value = math.clamp(options.Default or minimum, minimum, maximum)
         local dragging = false
+        local decimals = options.Decimals or 0
+        local step = options.Step or 1
 
         local frame = create("Frame", {
             BackgroundColor3 = NullLibrary.Theme.SurfaceRaised,
-            Size = UDim2.new(1, 0, 0, 66),
+            Size = UDim2.new(1, 0, 0, 82),
             Parent = holder
         })
-        corner(frame, 14)
+        corner(frame, 9)
         stroke(frame, 0.15, 1)
 
         create("TextLabel", {
@@ -1471,7 +1856,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         local track = create("Frame", {
             BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
             Position = UDim2.fromOffset(14, 42),
-            Size = UDim2.new(1, -28, 0, 8),
+            Size = UDim2.new(1, -28, 0, 12),
             Parent = frame
         })
         corner(track, 999)
@@ -1487,21 +1872,61 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundColor3 = NullLibrary.Theme.Text,
             Position = UDim2.new(0, 0, 0.5, 0),
-            Size = UDim2.fromOffset(16, 16),
+            Size = UDim2.fromOffset(20, 20),
             Parent = track
         })
         corner(knob, 999)
+
+        local hitbox = create("TextButton", {
+            AutoButtonColor = false,
+            BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(0, -8),
+            Size = UDim2.new(1, 0, 1, 16),
+            Text = "",
+            Parent = track
+        })
+
+        local plusButton = create("TextButton", {
+            AutoButtonColor = false,
+            BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
+            Position = UDim2.new(1, -78, 0, 56),
+            Size = UDim2.fromOffset(30, 18),
+            Text = "+",
+            TextColor3 = NullLibrary.Theme.Text,
+            TextSize = 14,
+            Font = Enum.Font.GothamBold,
+            Parent = frame
+        })
+        corner(plusButton, 6)
+
+        local minusButton = create("TextButton", {
+            AutoButtonColor = false,
+            BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
+            Position = UDim2.new(1, -114, 0, 56),
+            Size = UDim2.fromOffset(30, 18),
+            Text = "-",
+            TextColor3 = NullLibrary.Theme.Text,
+            TextSize = 14,
+            Font = Enum.Font.GothamBold,
+            Parent = frame
+        })
+        corner(minusButton, 6)
 
         local controller = {Window = self.Window}
         function controller:Set(selfOrValue, maybeValue, maybeSkip)
             local newValue, skipCallback = normalizeSetArgs(selfOrValue, maybeValue, maybeSkip)
             newValue = tonumber(newValue) or minimum
             value = math.clamp(newValue, minimum, maximum)
+            value = minimum + (clampRound((value - minimum) / math.max(step, 0.0001)) * step)
+            value = math.clamp(value, minimum, maximum)
+
+            local multiplier = 10 ^ decimals
+            value = math.floor(value * multiplier + 0.5) / multiplier
 
             local alpha = (value - minimum) / math.max(maximum - minimum, 1)
-            fill.Size = UDim2.new(alpha, 0, 1, 0)
-            knob.Position = UDim2.new(alpha, 0, 0.5, 0)
-            number.Text = tostring(math.floor((value * 100) + 0.5) / 100)
+            tween(fill, {Size = UDim2.new(alpha, 0, 1, 0)}, 0.12)
+            tween(knob, {Position = UDim2.new(alpha, 0, 0.5, 0)}, 0.12)
+            number.Text = string.format("%." .. tostring(decimals) .. "f", value)
             self.Window.Flags[flag] = value
 
             if not skipCallback and options.Callback then
@@ -1518,7 +1943,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             controller:Set(minimum + ((maximum - minimum) * alpha))
         end
 
-        track.InputBegan:Connect(function(input)
+        hitbox.InputBegan:Connect(function(input)
             local userType = input.UserInputType
             if userType ~= Enum.UserInputType.MouseButton1 and userType ~= Enum.UserInputType.Touch then
                 return
@@ -1548,6 +1973,14 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             end
         end)
 
+        plusButton.MouseButton1Click:Connect(function()
+            controller:Set(value + step)
+        end)
+
+        minusButton.MouseButton1Click:Connect(function()
+            controller:Set(value - step)
+        end)
+
         register(flag, controller, value)
         controller:Set(value, true)
         return controller
@@ -1563,7 +1996,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             Size = UDim2.new(1, 0, 0, 46),
             Parent = holder
         })
-        corner(frame, 14)
+        corner(frame, 9)
         stroke(frame, 0.15, 1)
 
         local box = create("TextBox", {
@@ -1614,7 +2047,6 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         local flag = options.Flag or options.Text
         local values = options.Values or {}
         local selected = options.Default or values[1] or "None"
-        local opened = false
 
         local wrap = create("Frame", {
             AutomaticSize = Enum.AutomaticSize.Y,
@@ -1643,51 +2075,13 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             Font = Enum.Font.GothamBold,
             Position = UDim2.new(1, -14, 0.5, 0),
             Size = UDim2.fromOffset(18, 18),
-            Text = "v",
+            Text = ">",
             TextColor3 = NullLibrary.Theme.Muted,
             TextSize = 13,
             Parent = button
         })
 
-        local container = create("Frame", {
-            BackgroundTransparency = 1,
-            ClipsDescendants = true,
-            Position = UDim2.fromOffset(0, 48),
-            Size = UDim2.new(1, 0, 0, 0),
-            Visible = false,
-            Parent = wrap
-        })
-
-        local listFrame = create("Frame", {
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BackgroundColor3 = NullLibrary.Theme.SurfaceRaised,
-            Size = UDim2.new(1, 0, 0, 0),
-            Parent = container
-        })
-        corner(listFrame, 14)
-        stroke(listFrame, 0.15, 1)
-        padding(listFrame, 8, 8)
-        list(listFrame, 6, false)
-
         local controller = {Window = self.Window}
-        local function setOpen(state)
-            opened = state
-            arrow.Text = opened and "^" or "v"
-
-            if opened then
-                container.Visible = true
-                container.Size = UDim2.new(1, 0, 0, 0)
-                tween(container, {Size = UDim2.new(1, 0, 0, listFrame.AbsoluteSize.Y)}, 0.2)
-            else
-                tween(container, {Size = UDim2.new(1, 0, 0, 0)}, 0.18)
-                task.delay(0.18, function()
-                    if container and not opened then
-                        container.Visible = false
-                    end
-                end)
-            end
-        end
-
         function controller:Set(selfOrValue, maybeValue, maybeSkip)
             local newValue, skipCallback = normalizeSetArgs(selfOrValue, maybeValue, maybeSkip)
             selected = newValue
@@ -1703,36 +2097,67 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             return selected
         end
 
-        for _, entry in ipairs(values) do
-            local option = create("TextButton", {
-                AutoButtonColor = false,
-                BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
-                Size = UDim2.new(1, 0, 0, 34),
-                Text = "",
-                Parent = listFrame
-            })
-            corner(option, 10)
-
-            create("TextLabel", {
-                BackgroundTransparency = 1,
-                Font = Enum.Font.GothamSemibold,
-                Position = UDim2.fromOffset(12, 0),
-                Size = UDim2.new(1, -24, 1, 0),
-                Text = tostring(entry),
-                TextColor3 = NullLibrary.Theme.Text,
-                TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = option
-            })
-
-            option.MouseButton1Click:Connect(function()
-                controller:Set(entry)
-                setOpen(false)
+        local function openPopup()
+            local popupHeight = math.min(220, (#values * 36) + 16)
+            local popup = self.Window:_createPopup(220, popupHeight, button)
+            popup.Destroying:Connect(function()
+                arrow.Text = ">"
             end)
+
+            local scroller = create("ScrollingFrame", {
+                Active = true,
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                CanvasSize = UDim2.new(),
+                Position = UDim2.fromOffset(8, 8),
+                ScrollBarImageColor3 = NullLibrary.Theme.AccentSoft,
+                ScrollBarThickness = 8,
+                Size = UDim2.new(1, -16, 1, -16),
+                ZIndex = 31,
+                Parent = popup
+            })
+            list(scroller, 6, false)
+
+            for _, entry in ipairs(values) do
+                local option = create("TextButton", {
+                    AutoButtonColor = false,
+                    BackgroundColor3 = tostring(entry) == tostring(selected) and NullLibrary.Theme.AccentSoft or NullLibrary.Theme.SurfaceAccent,
+                    Size = UDim2.new(1, 0, 0, 34),
+                    Text = "",
+                    ZIndex = 32,
+                    Parent = scroller
+                })
+                corner(option, 8)
+
+                create("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Font = Enum.Font.GothamSemibold,
+                    Position = UDim2.fromOffset(12, 0),
+                    Size = UDim2.new(1, -24, 1, 0),
+                    Text = tostring(entry),
+                    TextColor3 = tostring(entry) == tostring(selected) and NullLibrary.Theme.Surface or NullLibrary.Theme.Text,
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 33,
+                    Parent = option
+                })
+
+                option.MouseButton1Click:Connect(function()
+                    controller:Set(entry)
+                    self.Window:_closePopup()
+                end)
+            end
         end
 
         button.MouseButton1Click:Connect(function()
-            setOpen(not opened)
+            if self.Window._activePopup and self.Window._activePopupAnchor == button then
+                self.Window:_closePopup()
+            else
+                self.Window:_closePopup(true)
+                arrow.Text = "<"
+                openPopup()
+            end
         end)
 
         register(flag, controller, selected)
