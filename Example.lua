@@ -9,6 +9,7 @@ local Window = NullLib:CreateWindow({
     ToggleKey = Enum.KeyCode.RightControl,
     ConfigFolder = "NullUI",
     ConfigName = "ExampleConfig",
+    TabPosition = "Left",
     WelcomeNotification = true
 })
 
@@ -37,7 +38,7 @@ local MainSection = MainTab:CreateSection({
 
 MainSection:AddParagraph(
     "NullUI",
-    "Библиотека возвращается через return NullLibrary, а элементы теперь поддерживают конфиги и работу через Set/Get без ошибки со Slider:Set(...)."
+    "Теперь UI без затемнения, с более строгим минималистичным дизайном, отдельным popup dropdown и встроенным выбором позиции вкладок."
 )
 
 MainSection:AddButton({
@@ -99,9 +100,15 @@ local MediaSection = MediaTab:CreateSection({
 })
 
 MediaSection:AddImage({
-    Image = "rbxassetid://7206946128",
+    Image = "https://i.pinimg.com/736x/29/a0/99/29a099ff1e87f0acf4de1705a751c9d4.jpg",
     Height = 150,
-    Caption = "Пример баннера внутри секции NullUI."
+    Caption = "Пример картинки по прямой ссылке."
+})
+
+MediaSection:AddImage({
+    ID = 7206946128,
+    Height = 120,
+    Caption = "Пример картинки по Roblox asset id."
 })
 
 MediaSection:AddButton({
