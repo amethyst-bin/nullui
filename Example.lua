@@ -1,4 +1,4 @@
-local NullLib = loadstring(game:HttpGetAsync("TTU_LINK_HERE"))()
+local NullLib = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ginzuss/nullui/refs/heads/main/NullUI.lua"))()
 
 local Window = NullLib:CreateWindow({
     Name = "NullUI_Example",
@@ -15,19 +15,19 @@ local Window = NullLib:CreateWindow({
 
 local MainTab = Window:CreateTab({
     Name = "Main",
-    Icon = "N",
+    Icon = "lucide:home",
     Description = "core controls"
 })
 
 local MediaTab = Window:CreateTab({
     Name = "Media",
-    Image = "rbxassetid://7733779610",
+    Icon = "lucide:image",
     Description = "images and style"
 })
 
 local ConfigTab = Window:CreateTab({
     Name = "Configs",
-    Icon = "C",
+    Icon = "lucide:settings-2",
     Description = "save and autoload"
 })
 
