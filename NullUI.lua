@@ -1,4 +1,3 @@
--- yomka
 local NullLibrary = {
     Theme = {
         Background = Color3.fromRGB(7, 8, 13),
@@ -1754,9 +1753,10 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
     })
     list(holder, 10, false)
 
-    local section = {}
+    local windowRef = self.Window
+    local section = {Window = windowRef}
     local function register(flag, controller, defaultValue)
-        return self.Window:_registerFlag(flag, controller, defaultValue)
+        return windowRef:_registerFlag(flag, controller, defaultValue)
     end
 
     function section:AddLabel(text)
