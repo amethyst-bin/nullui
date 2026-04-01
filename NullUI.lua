@@ -12,14 +12,13 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "2.1"
+    Version = "2.2"
 }
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
 
 local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
@@ -133,7 +132,8 @@ end
 
 local function resolveLucideIcon(source)
     if type(source) ~= "string" then return nil end
-    local iconName = source:match("^lucide:(.+)$")
+    -- Разрешаем писать и lucide:имя и просто имя
+    local iconName = source:match("^lucide:(.+)$") or source
     if not iconName or iconName == "" then return nil end
     local icons = getLucideIcons()
     if type(icons) ~= "table" then return nil end
@@ -142,25 +142,28 @@ end
 
 local function normalizeImage(source)
     if source == nil then return "" end
-    local lucideIcon = resolveLucideIcon(source)
-    if lucideIcon then return lucideIcon end
     if type(source) == "number" then return "rbxassetid://" .. tostring(source) end
     source = tostring(source)
     if source == "" then return "" end
+    
     if string.match(source, "^%d+$") then return "rbxassetid://" .. source end
     if string.match(source, "^rbxassetid://") or string.match(source, "^rbxthumb://") or string.match(source, "^https?://") then return source end
+    
+    -- Пытаемся найти иконку в Lucide как запасной вариант
+    local lucideIcon = resolveLucideIcon(source)
+    if lucideIcon then return lucideIcon end
+    
     return source
 end
 
 local function isImageSource(source)
     if source == nil then return false end
     if type(source) == "number" then return true end
-    if resolveLucideIcon(source) then return true end
     source = tostring(source)
-    return string.match(source, "^%d+$") ~= nil
-        or string.match(source, "^rbxassetid://") ~= nil
-        or string.match(source, "^rbxthumb://") ~= nil
-        or string.match(source, "^https?://") ~= nil
+    if string.match(source, "^%d+$") then return true end
+    if string.match(source, "^rbxassetid://") or string.match(source, "^rbxthumb://") or string.match(source, "^https?://") then return true end
+    if resolveLucideIcon(source) then return true end
+    return false
 end
 
 local Storage = {}
@@ -229,29 +232,32 @@ function NullLibrary:Notify(options)
     local _, holder = self:_ensureNotificationGui()
     local mobile = viewportSize().X < 760 or isTouch()
 
-    local card = create("Frame", {
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = self.Theme.SurfaceSoft,
-        Size = UDim2.new(1, 0, 0, 0),
-        Parent = holder
-    })
-    corner(card, 11)
-    stroke(card, 0.12, 1)
-    
     local shadow = create("ImageLabel", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
         Image = "rbxassetid://6015897843",
         ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ImageTransparency = 0.5,
-        Position = UDim2.new(0.5, 0, 0.5, 0),
+        ImageTransparency = 1, -- Starts invisible
         Size = UDim2.new(1, 30, 1, 30),
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(49, 49, 450, 450),
-        ZIndex = math.max(card.ZIndex - 1, 0),
-        Parent = card
+        Parent = holder
     })
 
+    -- CanvasGroup fixes clipping and fading issues easily
+    local card = create("CanvasGroup", {
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = self.Theme.SurfaceSoft,
+        Position = UDim2.fromOffset(50, 0), -- Slide in offset
+        Size = UDim2.new(1, 0, 0, 0),
+        GroupTransparency = 1,
+        Parent = shadow
+    })
+    corner(card, 11)
+    stroke(card, 0, 1, self.Theme.Stroke)
+    
+    shadow.Size = UDim2.new(0, 360, 0, card.AbsoluteSize.Y)
+    
     local line = create("Frame", {
         BackgroundColor3 = options.Color or self.Theme.AccentSoft,
         Size = UDim2.new(0, 4, 1, 0),
@@ -259,14 +265,20 @@ function NullLibrary:Notify(options)
     })
     corner(line, 999)
 
-    local progress = create("Frame", {
-        AnchorPoint = Vector2.new(0, 1),
-        BackgroundColor3 = options.Color or self.Theme.AccentSoft,
-        Position = UDim2.new(0, 0, 1, 0),
+    local progressContainer = create("Frame", {
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Position = UDim2.new(0, 0, 1, -3),
         Size = UDim2.new(1, 0, 0, 3),
         Parent = card
     })
-    corner(progress, 999)
+    corner(progressContainer, 11)
+
+    local progress = create("Frame", {
+        BackgroundColor3 = options.Color or self.Theme.AccentSoft,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = progressContainer
+    })
 
     local body = create("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -347,31 +359,29 @@ function NullLibrary:Notify(options)
         Parent = card
     })
 
-    card.BackgroundTransparency = 1
-    shadow.ImageTransparency = 1
-    line.BackgroundTransparency = 1
-    progress.BackgroundTransparency = 1
-    body.Position = body.Position + UDim2.fromOffset(20, 0)
+    -- Add extra padding at bottom so text doesnt touch the progress bar
+    create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 8),
+        Parent = body
+    })
     
-    tween(card, {BackgroundTransparency = 0}, 0.26, Enum.EasingStyle.Exponential)
-    tween(shadow, {ImageTransparency = 0.5}, 0.26, Enum.EasingStyle.Exponential)
-    tween(line, {BackgroundTransparency = 0}, 0.24)
-    tween(progress, {BackgroundTransparency = 0.18}, 0.24)
-    tween(body, {Position = body.Position - UDim2.fromOffset(20, 0)}, 0.28, Enum.EasingStyle.Exponential)
-    tween(progress, {Size = UDim2.new(0, 0, 0, 3)}, options.Duration or 4.5, Enum.EasingStyle.Linear)
+    shadow.Size = UDim2.new(1, 0, 0, card.AbsoluteSize.Y)
+    
+    -- Animation in
+    tween(card, {GroupTransparency = 0, Position = UDim2.fromOffset(0,0)}, 0.35, Enum.EasingStyle.Exponential)
+    tween(shadow, {ImageTransparency = 0.5}, 0.35, Enum.EasingStyle.Exponential)
+    tween(progress, {Size = UDim2.new(0, 0, 1, 0)}, options.Duration or 4.5, Enum.EasingStyle.Linear)
 
     local closed = false
     local function dismiss()
         if closed then return end
         closed = true
-        tween(card, {BackgroundTransparency = 1}, 0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
-        tween(shadow, {ImageTransparency = 1}, 0.2)
-        tween(line, {BackgroundTransparency = 1}, 0.2)
-        tween(progress, {BackgroundTransparency = 1}, 0.15)
-        tween(body, {Position = body.Position + UDim2.fromOffset(15, 0), BackgroundTransparency = 1}, 0.2, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+        tween(card, {GroupTransparency = 1, Position = UDim2.fromOffset(50, 0)}, 0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+        tween(shadow, {ImageTransparency = 1}, 0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
         
-        task.delay(0.25, function()
-            if card and card.Parent then card:Destroy() end
+        task.delay(0.35, function()
+            if shadow and shadow.Parent then shadow:Destroy() end
         end)
     end
 
@@ -435,7 +445,6 @@ function NullLibrary:CreateWindow(options)
     corner(root, 12)
     stroke(root, 0.1, 1)
 
-    -- Window Shadow
     create("ImageLabel", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundTransparency = 1,
@@ -617,9 +626,11 @@ function NullLibrary:CreateWindow(options)
         Parent = screenGui
     })
 
-    local floatingTabsBar = create("Frame", {
+    -- CanvasGroup fixes the disappear/reappear bug nicely
+    local floatingTabsBar = create("CanvasGroup", {
         BackgroundColor3 = self.Theme.SurfaceSoft,
         Size = UDim2.fromScale(1, 1),
+        GroupTransparency = 0,
         Parent = floatingTabs
     })
     corner(floatingTabsBar, 10)
@@ -734,6 +745,7 @@ function NullLibrary:CreateWindow(options)
         Pages = pages,
         TabHolder = tabHolder,
         FloatingTabs = floatingTabs,
+        FloatingTabsBar = floatingTabsBar,
         FloatingHolder = floatingHolder,
         TabPosition = options.TabPosition or "Left",
         Tabs = {},
@@ -764,17 +776,9 @@ function NullLibrary:CreateWindow(options)
         _popupConnections = {},
     }, Window)
 
-    function window:_configDirectory()
-        return self.ConfigFolder
-    end
-
-    function window:_configFilePath(configName)
-        return string.format("%s/%s.json", self:_configDirectory(), configName)
-    end
-
-    function window:_autoloadStatePath()
-        return string.format("%s/_autoload.json", self:_configDirectory())
-    end
+    function window:_configDirectory() return self.ConfigFolder end
+    function window:_configFilePath(configName) return string.format("%s/%s.json", self:_configDirectory(), configName) end
+    function window:_autoloadStatePath() return string.format("%s/_autoload.json", self:_configDirectory()) end
 
     function window:_ensureFolders()
         if not self.Library:_storageAvailable() then return false end
@@ -889,7 +893,9 @@ function NullLibrary:CreateWindow(options)
             self.CurrentSize = Vector2.new(math.min(420, maxWidth), math.min(540, maxHeight))
         end
 
-        self.Root.Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y)
+        -- Smooth size interpolation
+        tween(self.Root, {Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y)}, 0.15, Enum.EasingStyle.Exponential)
+        
         self.Root.Position = self.StoredPosition
         self.MobileToggle.Visible = mobile and not self.Open
         hideButton.Visible = not mobile
@@ -917,6 +923,11 @@ function NullLibrary:CreateWindow(options)
             self.ScreenGui.Enabled = true
             self.MobileToggle.Visible = false
             self:_closePopup(true)
+            
+            if self.TabPosition == "Top" or self.TabPosition == "Bottom" then
+                self.FloatingTabs.Visible = true
+                tween(self.FloatingTabsBar, {GroupTransparency = 0}, instant and 0 or 0.34, Enum.EasingStyle.Exponential)
+            end
 
             if instant then
                 self.Root.Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y)
@@ -932,6 +943,7 @@ function NullLibrary:CreateWindow(options)
             self.Root.Size = UDim2.fromOffset(self.CurrentSize.X - 26, self.CurrentSize.Y - 18)
             self.Root.BackgroundTransparency = 0.04
             uiScale.Scale = (viewportSize().X < 760 and 0.9 or 0.975)
+            
             tween(self.Root, {
                 Position = targetPosition,
                 Size = UDim2.fromOffset(self.CurrentSize.X, self.CurrentSize.Y),
@@ -948,12 +960,15 @@ function NullLibrary:CreateWindow(options)
             self.MobileToggle.Visible = isTouch() or viewportSize().X < 760
             self:_closePopup(true)
             settingsMenu.Visible = false
-            self.FloatingTabs.Visible = self.TabPosition == "Top" or self.TabPosition == "Bottom"
 
             if instant then
                 self.ScreenGui.Enabled = false
                 self.FloatingTabs.Visible = false
                 return
+            end
+
+            if self.TabPosition == "Top" or self.TabPosition == "Bottom" then
+                tween(self.FloatingTabsBar, {GroupTransparency = 1}, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
             end
 
             tween(self.Root, {
@@ -962,6 +977,7 @@ function NullLibrary:CreateWindow(options)
                 BackgroundTransparency = 0.08
             }, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
             tween(uiScale, {Scale = viewportSize().X < 760 and 0.88 or 0.965}, 0.22, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+            
             task.delay(0.22, function()
                 if self.Root and not self.Open then
                     self.FloatingTabs.Visible = false
@@ -1064,7 +1080,6 @@ function NullLibrary:CreateWindow(options)
         self._activePopup = popup
         self._activePopupAnchor = anchorGui
 
-        -- Safe outside click detection
         table.insert(self._popupConnections, UIS.InputBegan:Connect(function(input, processed)
             if processed and input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
                 return
@@ -1093,12 +1108,13 @@ function NullLibrary:CreateWindow(options)
         local barWidth = math.max(240, rootSize.X - 120)
         local barX = rootPos.X + math.floor((rootSize.X - barWidth) * 0.5)
 
+        -- Fixed Bottom/Top logic so they detach from UI
         if self.TabPosition == "Top" then
-            self.FloatingTabs.Position = UDim2.fromOffset(barX, rootPos.Y - 48)
+            self.FloatingTabs.Position = UDim2.fromOffset(barX, rootPos.Y - 56)
         else
-            self.FloatingTabs.Position = UDim2.fromOffset(barX, rootPos.Y + rootSize.Y + 8)
+            self.FloatingTabs.Position = UDim2.fromOffset(barX, rootPos.Y + rootSize.Y + 16)
         end
-        self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 40)
+        self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 44)
     end
 
     function window:_layoutChrome(mode)
@@ -1134,6 +1150,7 @@ function NullLibrary:CreateWindow(options)
             self.Content.Position = UDim2.fromOffset(18, top)
             self.Content.Size = UDim2.new(1, -36, 1, -102)
             self.FloatingTabs.Visible = true
+            self.FloatingTabsBar.GroupTransparency = self.Open and 0 or 1
             tabHolder.Parent = self.FloatingHolder
             tabHolder.Position = UDim2.fromOffset(0, 0)
             tabHolder.Size = UDim2.fromScale(1, 1)
@@ -1354,7 +1371,7 @@ function NullLibrary:CreateWindow(options)
         end)
     end
 
-    -- Window Dragging Logic (FIXED: Localized connections)
+    -- Window Dragging Logic
     topbar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local dragStart = input.Position
@@ -1366,8 +1383,8 @@ function NullLibrary:CreateWindow(options)
                     local delta = input2.Position - dragStart
                     local targetPosition = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
                     window.StoredPosition = targetPosition
-                    tween(root, {Position = targetPosition}, 0.12, Enum.EasingStyle.Quint)
-                    window:_syncFloatingTabs()
+                    -- Super smooth exponential tween for dragging
+                    tween(root, {Position = targetPosition}, 0.25, Enum.EasingStyle.Exponential)
                 end
             end)
 
@@ -1380,7 +1397,7 @@ function NullLibrary:CreateWindow(options)
         end
     end)
 
-    -- Window Resizing Logic (FIXED: Localized connections)
+    -- Window Resizing Logic
     resizeHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local resizeStart = input.Position
@@ -1454,11 +1471,11 @@ end
 
 function Tab:SetLayout(mode)
     local horizontal = mode == "Bottom" or mode == "Top"
-    self.Button.Size = horizontal and UDim2.fromOffset(170, 40) or UDim2.new(1, 0, 0, 52)
+    self.Button.Size = horizontal and UDim2.fromOffset(170, 44) or UDim2.new(1, 0, 0, 52)
     self.Frame.Size = UDim2.fromScale(1, 1)
 
     if horizontal then
-        self.IconWrap.Position = UDim2.fromOffset(8, 8)
+        self.IconWrap.Position = UDim2.fromOffset(8, 10)
         self.IconWrap.Size = UDim2.fromOffset(24, 24)
         self.ImageLabel.Position = UDim2.fromOffset(4, 4)
         self.ImageLabel.Size = UDim2.fromOffset(16, 16)
@@ -1586,6 +1603,44 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         }))
 
         return paragraph
+    end
+
+    function section:AddImage(options)
+        options = options or {}
+        local frame = create("Frame", {
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = NullLibrary.Theme.SurfaceRaised,
+            Size = UDim2.new(1, 0, 0, 0),
+            Parent = holder
+        })
+        corner(frame, 9)
+        stroke(frame, 0.15, 1)
+        padding(frame, 10, 10)
+
+        local image = create("ImageLabel", {
+            BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
+            Image = normalizeImage(options.Image or options.Url or options.ID),
+            Size = UDim2.new(1, 0, 0, options.Height or 140),
+            ScaleType = options.ScaleType or Enum.ScaleType.Crop,
+            Parent = frame
+        })
+        corner(image, options.CornerRadius or 8)
+
+        if options.Caption and options.Caption ~= "" then
+            autosizeText(create("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Enum.Font.GothamMedium,
+                Position = UDim2.fromOffset(0, (options.Height or 140) + 10),
+                Size = UDim2.new(1, 0, 0, 0),
+                Text = options.Caption,
+                TextColor3 = NullLibrary.Theme.Muted,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = frame
+            }))
+        end
+
+        return image
     end
 
     function section:AddButton(options)
@@ -1844,7 +1899,6 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             controller:Set(minimum + ((maximum - minimum) * alpha))
         end
 
-        -- Slider Drag Logic (FIXED: Localized connections)
         hitbox.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 updateFromPosition(input.Position)
@@ -1992,7 +2046,6 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             local popupHeight = math.min(220, (#values * 36) + 16)
             local popup = self.Window:_createPopup(220, popupHeight, button)
             
-            -- Detect destroy for Arrow Reset cleanly
             local destroyConn
             destroyConn = popup.AncestryChanged:Connect(function()
                 if not popup:IsDescendantOf(game) then
