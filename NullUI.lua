@@ -12,7 +12,7 @@ AccentSoft = Color3.fromRGB(140, 160, 255),
 Good = Color3.fromRGB(80, 255, 160),
 Bad = Color3.fromRGB(255, 80, 100),
 },
-Version = "3.1 Glass"
+Version = "3.3 Glass"
 }
 
 local Players = game:GetService("Players")
@@ -122,6 +122,7 @@ readfile = readfile,
 makefolder = makefolder,
 isfolder = isfolder,
 isfile = isfile,
+listfiles = listfiles,
 getcustomasset = getcustomasset or getsynasset
 }
 
@@ -188,6 +189,14 @@ if resolveLucideIcon(source) then return true end
 return false
 end
 
+local function configNameFromPath(path)
+if type(path) ~= "string" then return nil end
+local fileName = path:match("[^/\\]+$")
+if not fileName then return nil end
+if not fileName:lower():match("%.json$") then return nil end
+return fileName:gsub("%.json$", "")
+end
+
 function NullLibrary:_storageAvailable()
 return Storage.readfile and Storage.writefile and Storage.makefolder and Storage.isfolder and Storage.isfile
 end
@@ -252,8 +261,8 @@ stroke(card, 0.4, 1, self.Theme.Text)
 
 local progress = create("Frame", {
     BackgroundColor3 = options.Color or self.Theme.AccentSoft,
-    AnchorPoint = Vector2.new(0, 1),
-    Position = UDim2.new(0, 0, 1, 0),
+    AnchorPoint = Vector2.new(1, 1),
+    Position = UDim2.new(1, 0, 1, 0),
     Size = UDim2.new(1, 0, 0, 2),
     ZIndex = 10,
     Parent = card
@@ -336,7 +345,7 @@ card.AnchorPoint = Vector2.new(0.5, 0.5)
 
 tween(card, {GroupTransparency = 0, Position = UDim2.new(0.5, 0, 0.5, 0)}, 0.4, Enum.EasingStyle.Exponential)
 tween(shadow, {ImageTransparency = 0.5}, 0.4, Enum.EasingStyle.Exponential)
-tween(progress, {Size = UDim2.new(0, 0, 1, 0)}, options.Duration or 4.5, Enum.EasingStyle.Linear)
+tween(progress, {Size = UDim2.new(0, 0, 0, 2)}, options.Duration or 4.5, Enum.EasingStyle.Linear)
 
 local closed = false
 local function dismiss()
@@ -592,6 +601,25 @@ function section:AddDropdown(options)
         if not skip and options.Callback then task.spawn(options.Callback, sel) end
     end
     function controller:Get() return sel end
+    function controller:SetValues(newValues, keepSelection)
+        vals = type(newValues) == "table" and newValues or {}
+        if #vals == 0 then vals = {"None"} end
+        local shouldKeep = false
+        if keepSelection then
+            for _, value in ipairs(vals) do
+                if tostring(value) == tostring(sel) then
+                    shouldKeep = true
+                    break
+                end
+            end
+        end
+        if shouldKeep then
+            label.Text = string.format("%s: %s", options.Text or "Dropdown", tostring(sel))
+            controller.Window.Flags[flag] = sel
+        else
+            controller:Set(vals[1], true, true)
+        end
+    end
 
     local function openPopup()
         arrow.Text = "v"
@@ -610,7 +638,9 @@ function section:AddDropdown(options)
     end
 
     button.MouseButton1Click:Connect(function() if self.Window._activePopup and self.Window._activePopupAnchor == button then self.Window:_closePopup() else self.Window:_closePopup(true) openPopup() end end)
-    register(flag, controller, sel) controller:Set(sel, true) return controller
+    register(flag, controller, sel)
+    controller:SetValues(vals, true)
+    return controller
 end
 
 return section
@@ -703,19 +733,25 @@ local hideButton = create("TextButton", {AutoButtonColor = false, BackgroundColo
 corner(hideButton, 6) stroke(hideButton, 0.6, 1)
 
 local sidebar = create("Frame", {BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(18, 84), Size = UDim2.new(0, 190, 1, -102), Parent = clip})
-corner(sidebar, 8) stroke(sidebar, 0.6, 1) padding(sidebar, 12, 12)
+sidebar.BackgroundColor3 = self.Theme.Background
+sidebar.BackgroundTransparency = 1
+corner(sidebar, 8) stroke(sidebar, 1, 1) padding(sidebar, 12, 12)
 
-local sidebarHeader = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 18), Text = options.SidebarTitle or "Tabs", TextColor3 = self.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = sidebar})
-local tabHolder = create("Frame", {BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), Parent = sidebar})
+local sidebarHeader = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = "", TextColor3 = self.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = sidebar})
+local tabHolder = create("Frame", {BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 1, 0), Parent = sidebar})
 list(tabHolder, 6, false)
 
 local content = create("Frame", {BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(220, 84), Size = UDim2.new(1, -238, 1, -102), Parent = clip})
-corner(content, 8) stroke(content, 0.6, 1)
+content.BackgroundColor3 = self.Theme.Background
+content.BackgroundTransparency = 1
+corner(content, 8) stroke(content, 1, 1)
 local pages = create("Folder", {Name = "Pages", Parent = content})
 
 local floatingTabs = create("Frame", {BackgroundTransparency = 1, Visible = false, ZIndex = 5, Parent = root})
 local floatingTabsBar = create("CanvasGroup", {BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency = 0.3, Size = UDim2.fromScale(1, 1), GroupTransparency = 0, Parent = floatingTabs})
-corner(floatingTabsBar, 8) stroke(floatingTabsBar, 0.6, 1) padding(floatingTabsBar, 6, 6)
+floatingTabsBar.BackgroundColor3 = self.Theme.Background
+floatingTabsBar.BackgroundTransparency = 1
+corner(floatingTabsBar, 8) stroke(floatingTabsBar, 1, 1) padding(floatingTabsBar, 6, 6)
 
 local floatingHolder = create("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = floatingTabsBar})
 local floatingLayout = list(floatingHolder, 6, true)
@@ -792,6 +828,7 @@ function window:SaveConfig(configName, silent)
         return false
     end
     local ok = self:_writeJson(self:_configFilePath(configName), self:_collectFlags())
+    if ok then self.ConfigName = configName end
     if ok and not silent then self.Library:Notify({Title = "Saved", Content = "Config saved.", Color = self.Library.Theme.Good}) end
     return ok
 end
@@ -805,8 +842,75 @@ function window:LoadConfig(configName, silent)
         local controller = self.Elements[flag]
         if controller and controller.Set then controller:Set(value, true) end
     end
+    self.ConfigName = configName
     if not silent then self.Library:Notify({Title = "Loaded", Content = "Config loaded.", Color = self.Library.Theme.Good}) end
     return true
+end
+
+function window:ListConfigs()
+    if not self:_ensureFolders() then return {} end
+    local names = {}
+    if Storage.listfiles then
+        local ok, files = pcall(Storage.listfiles, self:_configDirectory())
+        if ok and type(files) == "table" then
+            for _, path in ipairs(files) do
+                local name = configNameFromPath(path)
+                if name and name ~= "_autoload" then
+                    names[name] = true
+                end
+            end
+        end
+    end
+    if not next(names) and Storage.isfile(self:_configFilePath(self.ConfigName)) then
+        names[self.ConfigName] = true
+    end
+    local result = {}
+    for name in pairs(names) do
+        table.insert(result, name)
+    end
+    table.sort(result)
+    return result
+end
+
+function window:RefreshConfigs()
+    return self:ListConfigs()
+end
+
+function window:GetAutoloadState()
+    local data = self:_readJson(self:_autoloadStatePath())
+    if type(data) ~= "table" then
+        return {Enabled = false, Config = nil}
+    end
+    return {
+        Enabled = data.Enabled == true and type(data.Config) == "string" and data.Config ~= "",
+        Config = type(data.Config) == "string" and data.Config ~= "" and data.Config or nil
+    }
+end
+
+function window:SetAutoloadConfig(configName, enabled, silent)
+    enabled = enabled == nil and true or not not enabled
+    if not enabled then
+        local ok = self:_writeJson(self:_autoloadStatePath(), {Enabled = false, Config = nil})
+        if ok and not silent then self.Library:Notify({Title = "Autoload", Content = "Autoload disabled.", Color = self.Library.Theme.Muted}) end
+        return ok
+    end
+    configName = configName or self.ConfigName
+    if type(configName) ~= "string" or configName == "" then return false end
+    local ok = self:_writeJson(self:_autoloadStatePath(), {Enabled = true, Config = configName})
+    if ok and not silent then self.Library:Notify({Title = "Autoload", Content = string.format("Autoload: %s", configName), Color = self.Library.Theme.Good}) end
+    return ok
+end
+
+function window:DisableAutoload(silent)
+    return self:SetAutoloadConfig(nil, false, silent)
+end
+
+function window:LoadAutoload(silent)
+    local state = self:GetAutoloadState()
+    if not state.Enabled or not state.Config then return false end
+    local ok = self:LoadConfig(state.Config, true)
+    if ok and not silent then self.Library:Notify({Title = "Autoload", Content = string.format("Loaded: %s", state.Config), Color = self.Library.Theme.Good}) end
+    return ok
 end
 
 function window:_applyRootSize()
@@ -936,7 +1040,7 @@ function window:_syncFloatingTabs()
     local tabsCount = #self.Tabs
     local barWidth = math.max(200, (tabsCount * 138) + 12)
     self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 48)
-    self.FloatingTabs.Position = self.TabPosition == "Top" and UDim2.new(0.5, 0, 0, -60) or UDim2.new(0.5, 0, 1, 60)
+    self.FloatingTabs.Position = self.TabPosition == "Top" and UDim2.new(0.5, 0, 0, -12) or UDim2.new(0.5, 0, 1, 12)
     self.FloatingTabs.AnchorPoint = self.TabPosition == "Top" and Vector2.new(0.5, 1) or Vector2.new(0.5, 0)
 end
 
@@ -948,7 +1052,7 @@ function window:_layoutChrome(mode)
 
     self.FloatingTabs.Visible = false
     self.Sidebar.Visible = mode == "Left" or mode == "Right"
-    self.SidebarHeader.Text = (mode == "Left" or mode == "Right") and (mobile and "UI" or (options.SidebarTitle or "Tabs")) or ""
+    self.SidebarHeader.Text = ""
 
     local top = 84
     if mode == "Left" then
@@ -956,18 +1060,24 @@ function window:_layoutChrome(mode)
         self.Sidebar.Size = mobile and UDim2.new(0, 98, 1, -102) or UDim2.new(0, 190, 1, -102)
         self.Content.Position = mobile and UDim2.fromOffset(128, top) or UDim2.fromOffset(220, top)
         self.Content.Size = mobile and UDim2.new(1, -146, 1, -102) or UDim2.new(1, -238, 1, -102)
+        tabHolder.Position = UDim2.new(0, 0, 0, 0)
+        tabHolder.Size = UDim2.new(1, 0, 1, 0)
         tabHolder.Parent = self.Sidebar
     elseif mode == "Right" then
         self.Sidebar.Position = UDim2.new(1, mobile and -110 or -202, 0, top)
         self.Sidebar.Size = mobile and UDim2.new(0, 98, 1, -102) or UDim2.new(0, 190, 1, -102)
         self.Content.Position = UDim2.fromOffset(18, top)
         self.Content.Size = mobile and UDim2.new(1, -146, 1, -102) or UDim2.new(1, -238, 1, -102)
+        tabHolder.Position = UDim2.new(0, 0, 0, 0)
+        tabHolder.Size = UDim2.new(1, 0, 1, 0)
         tabHolder.Parent = self.Sidebar
     elseif mode == "Bottom" or mode == "Top" then
         self.Content.Position = UDim2.fromOffset(18, top)
         self.Content.Size = UDim2.new(1, -36, 1, -102)
         self.FloatingTabs.Visible = true
         self.FloatingTabsBar.GroupTransparency = self.Open and 0 or 1
+        tabHolder.Position = UDim2.new(0, 0, 0, 0)
+        tabHolder.Size = UDim2.new(1, 0, 1, 0)
         tabHolder.Parent = self.FloatingHolder
     end
 
@@ -976,6 +1086,7 @@ function window:_layoutChrome(mode)
         local horizontalTabs = mode == "Bottom" or mode == "Top"
         layoutObject.FillDirection = horizontalTabs and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
         layoutObject.HorizontalAlignment = horizontalTabs and Enum.HorizontalAlignment.Center or Enum.HorizontalAlignment.Left
+        layoutObject.VerticalAlignment = horizontalTabs and Enum.VerticalAlignment.Center or Enum.VerticalAlignment.Top
     end
     for _, tab in ipairs(self.Tabs) do tab:SetLayout(mode) end
     self:_syncFloatingTabs()
@@ -986,13 +1097,13 @@ function window:CreateTab(tabOptions, maybeIcon)
     local tabImageSource = tabOptions.Image or (isImageSource(tabOptions.Icon) and tabOptions.Icon or nil)
 
     local button = create("TextButton", {AutoButtonColor = false, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48), Text = "", Parent = tabHolder})
-    local frame = create("Frame", {BackgroundColor3 = self.Library.Theme.SurfaceRaised, BackgroundTransparency = 0.5, Size = UDim2.fromScale(1, 1), Parent = button})
+    local frame = create("Frame", {BackgroundColor3 = self.Library.Theme.SurfaceRaised, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = button})
     corner(frame, 6) stroke(frame, 0.6, 1)
 
     local activeLine = create("Frame", {BackgroundColor3 = self.Library.Theme.AccentSoft, BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 24), Size = UDim2.fromOffset(10, 2), Parent = frame})
     corner(activeLine, 999)
 
-    local iconWrap = create("Frame", {BackgroundColor3 = self.Library.Theme.SurfaceAccent, BackgroundTransparency=0.5, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(32, 32), Parent = frame})
+    local iconWrap = create("Frame", {BackgroundColor3 = self.Library.Theme.SurfaceAccent, BackgroundTransparency=1, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(32, 32), Parent = frame})
     corner(iconWrap, 6)
 
     local imageLabel = create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage(tabImageSource), Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(20, 20), ScaleType = Enum.ScaleType.Fit, Visible = tabImageSource ~= nil, Parent = iconWrap})
@@ -1008,8 +1119,6 @@ function window:CreateTab(tabOptions, maybeIcon)
     tab:SetLayout(self.TabPosition)
 
     button.MouseButton1Click:Connect(function() self:SelectTab(tab) end)
-    button.MouseEnter:Connect(function() if self.CurrentTab ~= tab then tween(frame, {BackgroundTransparency = 0.2}, 0.2) end end)
-    button.MouseLeave:Connect(function() if self.CurrentTab ~= tab then tween(frame, {BackgroundTransparency = 0.5}, 0.2) end end)
     if not self.CurrentTab then self:SelectTab(tab, true) end
     return tab
 end
@@ -1020,11 +1129,12 @@ function window:SelectTab(targetTab, instant)
     for _, tab in ipairs(self.Tabs) do
         local active = tab == targetTab
         tab.Page.Visible = active and true or false
-        tween(tab.Frame, {BackgroundColor3 = active and self.Library.Theme.SurfaceAccent or self.Library.Theme.SurfaceRaised, BackgroundTransparency = active and 0.1 or 0.5}, instant and 0 or 0.2)
-        tween(tab.IconWrap, {BackgroundColor3 = active and self.Library.Theme.AccentSoft or self.Library.Theme.SurfaceAccent, BackgroundTransparency = active and 0 or 0.5}, instant and 0 or 0.2)
+        tween(tab.Frame, {BackgroundTransparency = 1}, instant and 0 or 0.2)
+        tween(tab.IconWrap, {BackgroundTransparency = 1}, instant and 0 or 0.2)
         tween(tab.ActiveLine, {BackgroundTransparency = active and 0 or 1, Size = active and UDim2.fromOffset(20, 2) or UDim2.fromOffset(10, 2)}, instant and 0 or 0.2)
         tab.Label.TextColor3 = active and self.Library.Theme.Text or self.Library.Theme.Muted
-        tab.GlyphLabel.TextColor3 = active and self.Library.Theme.Surface or self.Library.Theme.Text
+        tab.GlyphLabel.TextColor3 = active and self.Library.Theme.AccentSoft or self.Library.Theme.Text
+        tab.ImageLabel.ImageColor3 = active and self.Library.Theme.AccentSoft or self.Library.Theme.Text
         if active then
             tab.Page.Position = UDim2.fromOffset(32, 16)
             tween(tab.Page, {Position = UDim2.fromOffset(16, 16)}, instant and 0 or 0.3, Enum.EasingStyle.Exponential)
@@ -1108,6 +1218,7 @@ UIS.InputBegan:Connect(function(input, processed)
     if input.KeyCode == window.ToggleKey then window:Toggle() return end
 end)
 
+window:LoadAutoload(true)
 window:_applyRootSize()
 window:_setOpen(true, false)
 if options.WelcomeNotification ~= false then task.delay(0.08, function() window:Notify({Title = options.Title or "Null", Content = "UI launched successfully.", Icon = options.Icon, Duration = 3, Color = self.Theme.Good}) end) end
