@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.3"
+    Version = "4.4"
 }
 
 local Players = game:GetService("Players")
@@ -859,8 +859,12 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             if typeof(value) == "Color3" then
                 parsedColor = value
             elseif type(value) == "table" then
-                if value[1] == "__NULLUI_COLOR_RGBA__" then
-                    local r, g, b, a = tonumber(value[2]), tonumber(value[3]), tonumber(value[4]), tonumber(value[5])
+                local tag = value[1] or value["1"]
+                if tag == "__NULLUI_COLOR_RGBA__" then
+                    local r = tonumber(value[2] or value["2"])
+                    local g = tonumber(value[3] or value["3"])
+                    local b = tonumber(value[4] or value["4"])
+                    local a = tonumber(value[5] or value["5"])
                     if r and g and b then parsedColor = Color3.new(math.clamp(r, 0, 1), math.clamp(g, 0, 1), math.clamp(b, 0, 1)) end
                     if a then parsedAlpha = a end
                 else
@@ -1019,7 +1023,10 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end)
 
         register(flag, controller, encode(color, alpha))
-        controller:Set(encode(color, alpha), true, true)
+        local hasPending = self.Window.PendingConfig and self.Window.PendingConfig[flag] ~= nil
+        if not hasPending then
+            controller:Set(encode(color, alpha), true, true)
+        end
         return controller
     end
 
