@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.2"
+    Version = "4.3"
 }
 
 local Players = game:GetService("Players")
@@ -852,16 +852,42 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end)
 
         local controller = {Window = self.Window}
+        local function parseColorValue(value, fallbackAlpha)
+            local parsedColor = nil
+            local parsedAlpha = tonumber(fallbackAlpha)
+
+            if typeof(value) == "Color3" then
+                parsedColor = value
+            elseif type(value) == "table" then
+                if value[1] == "__NULLUI_COLOR_RGBA__" then
+                    local r, g, b, a = tonumber(value[2]), tonumber(value[3]), tonumber(value[4]), tonumber(value[5])
+                    if r and g and b then parsedColor = Color3.new(math.clamp(r, 0, 1), math.clamp(g, 0, 1), math.clamp(b, 0, 1)) end
+                    if a then parsedAlpha = a end
+                else
+                    local r, g, b = tonumber(value.R), tonumber(value.G), tonumber(value.B)
+                    local a = tonumber(value.A)
+                    if r and g and b then parsedColor = Color3.new(math.clamp(r, 0, 1), math.clamp(g, 0, 1), math.clamp(b, 0, 1)) end
+                    if a then parsedAlpha = a end
+                end
+            elseif type(value) == "string" then
+                local hex = value:match("^#?([%x][%x][%x][%x][%x][%x])$")
+                if hex then
+                    local r = tonumber(hex:sub(1, 2), 16) / 255
+                    local g = tonumber(hex:sub(3, 4), 16) / 255
+                    local b = tonumber(hex:sub(5, 6), 16) / 255
+                    parsedColor = Color3.new(r, g, b)
+                end
+            end
+
+            if parsedAlpha == nil then parsedAlpha = alpha end
+            parsedAlpha = math.clamp(parsedAlpha, 0, 1)
+            return parsedColor, parsedAlpha
+        end
         function controller:Set(s, v, sk)
             local newValue, skip = normalizeSetArgs(s, v, sk)
-            if typeof(newValue) == "Color3" then
-                color = newValue
-                if type(v) == "number" then alpha = math.clamp(v, 0, 1) end
-            elseif type(newValue) == "table" then
-                local r, g, b, a = tonumber(newValue.R), tonumber(newValue.G), tonumber(newValue.B), tonumber(newValue.A)
-                if r and g and b then color = Color3.new(math.clamp(r, 0, 1), math.clamp(g, 0, 1), math.clamp(b, 0, 1)) end
-                if a then alpha = math.clamp(a, 0, 1) end
-            end
+            local parsedColor, parsedAlpha = parseColorValue(newValue, v)
+            if parsedColor then color = parsedColor end
+            alpha = parsedAlpha
             hue, sat, val = Color3.toHSV(color)
             updatePreview()
             controller.Window.Flags[flag] = encode(color, alpha)
@@ -869,6 +895,15 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end
         function controller:Get() return encode(color, alpha) end
         function controller:GetColor() return color, alpha end
+        function controller:Serialize()
+            return {"__NULLUI_COLOR_RGBA__", color.R, color.G, color.B, alpha}
+        end
+        function controller:Deserialize(savedValue, skip)
+            local parsedColor, parsedAlpha = parseColorValue(savedValue, alpha)
+            if parsedColor then
+                controller:Set({R = parsedColor.R, G = parsedColor.G, B = parsedColor.B, A = parsedAlpha}, skip == true)
+            end
+        end
 
         local function openPopup()
             local popup = self.Window:_createPopup(318, 262, button, Vector2.new(12, -110))
@@ -1248,7 +1283,15 @@ function NullLibrary:CreateWindow(options)
 
     function window:_collectFlags()
         local data = {}
-        for flag, controller in pairs(self.Elements) do if controller and controller.Get then data[flag] = controller:Get() end end
+        for flag, controller in pairs(self.Elements) do
+            if controller then
+                if controller.Serialize then
+                    data[flag] = controller:Serialize()
+                elseif controller.Get then
+                    data[flag] = controller:Get()
+                end
+            end
+        end
         data["_UISize"] = {X = self.CurrentSize.X, Y = self.CurrentSize.Y}
         data["_Theme"] = self.ThemeName or "Null"
         return data
@@ -1280,7 +1323,13 @@ function NullLibrary:CreateWindow(options)
                 self:SetThemeByName(value, true)
             else
                 local controller = self.Elements[flag]
-                if controller and controller.Set then controller:Set(value, true) end
+                if controller then
+                    if controller.Deserialize then
+                        controller:Deserialize(value, true)
+                    elseif controller.Set then
+                        controller:Set(value, true)
+                    end
+                end
             end
         end
         
