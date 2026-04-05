@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "3.7 Fixed & Blurred"
+    Version = "3.8"
 }
 
 local Players = game:GetService("Players")
@@ -373,6 +373,8 @@ function Tab:SetLayout(mode)
     local horizontal = mode == "Bottom" or mode == "Top"
     self.Button.Size = horizontal and UDim2.fromOffset(130, 36) or UDim2.new(1, 0, 0, 48)
     self.Frame.Size = UDim2.fromScale(1, 1)
+    self.Frame.BackgroundColor3 = horizontal and self.Window.Library.Theme.SurfaceRaised or self.Window.Library.Theme.Background
+    self.IconWrap.BackgroundColor3 = horizontal and self.Window.Library.Theme.SurfaceAccent or self.Window.Library.Theme.Background
 
     local active = self.Window.CurrentTab == self
 
@@ -665,12 +667,22 @@ function NullLibrary:CreateWindow(options)
     local container = RunService:IsStudio() and PlayerGui or CoreGui
     local existing = container:FindFirstChild(name)
     if existing then existing:Destroy() end
+    local existingWatermark = container:FindFirstChild(name .. "_Watermark")
+    if existingWatermark then existingWatermark:Destroy() end
 
     local screenGui = create("ScreenGui", {
         Name = name,
         IgnoreGuiInset = true,
         ResetOnSpawn = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        Parent = container
+    })
+    local watermarkGui = create("ScreenGui", {
+        Name = name .. "_Watermark",
+        IgnoreGuiInset = true,
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        DisplayOrder = (screenGui.DisplayOrder or 0) + 1,
         Parent = container
     })
 
@@ -737,11 +749,13 @@ function NullLibrary:CreateWindow(options)
     corner(badge, 6) stroke(badge, 0.6, 1)
     create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.fromScale(1, 1), Text = options.BadgeText or "NULL", TextColor3 = self.Theme.Text, TextSize = 11, Parent = badge})
 
-    local settingsButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "⚙", TextColor3 = self.Theme.Muted, TextSize = 16, Font = Enum.Font.GothamBold, Parent = controls})
+    local settingsButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "", Parent = controls})
     corner(settingsButton, 6) stroke(settingsButton, 0.6, 1)
+    create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:settings-2"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, Parent = settingsButton})
 
-    local hideButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "-", TextColor3 = self.Theme.Muted, TextSize = 18, Font = Enum.Font.GothamBold, Parent = controls})
+    local hideButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "", Parent = controls})
     corner(hideButton, 6) stroke(hideButton, 0.6, 1)
+    create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:minus"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, Parent = hideButton})
 
     local sidebar = create("Frame", {BackgroundColor3 = self.Theme.Background, BackgroundTransparency = 0.2, Position = UDim2.fromOffset(18, 84), Size = UDim2.new(0, 190, 1, -102), Parent = clip})
     corner(sidebar, 8) stroke(sidebar, 1, 1) padding(sidebar, 12, 12)
@@ -765,7 +779,7 @@ function NullLibrary:CreateWindow(options)
     floatingLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     floatingLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-    local settingsMenu = create("Frame", {AnchorPoint = Vector2.new(1, 0), BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency=0.1, Position = UDim2.new(1, -18, 0, 60), Size = UDim2.fromOffset(170, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 15, Parent = clip})
+    local settingsMenu = create("Frame", {AnchorPoint = Vector2.new(1, 0), BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency=0.1, Position = UDim2.new(1, -18, 0, 60), Size = UDim2.fromOffset(188, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 15, Parent = clip})
     corner(settingsMenu, 8) stroke(settingsMenu, 0.5, 1) padding(settingsMenu, 8, 8)
     list(settingsMenu, 6, false)
 
@@ -791,7 +805,7 @@ function NullLibrary:CreateWindow(options)
         AutomaticSize = Enum.AutomaticSize.X,
         Visible = true,
         ZIndex = 100, 
-        Parent = screenGui
+        Parent = watermarkGui
     })
 
     local watermarkBg = create("Frame", {
@@ -855,7 +869,7 @@ function NullLibrary:CreateWindow(options)
         MinSize = options.MinSize or Vector2.new(420, 340), MaxSize = options.MaxSize or Vector2.new(1200, 900), CurrentSize = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(780, 520),
         UserResized = false, Open = true, StoredPosition = options.Position or UDim2.fromScale(0.5, 0.5), ToggleKey = options.ToggleKey or Enum.KeyCode.RightControl, Elements = {}, Flags = {}, PendingConfig = nil, ConfigFolder = options.ConfigFolder or "NullUI", ConfigName = options.ConfigName or name,
         MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
-        Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon,
+        Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon, WatermarkGui = watermarkGui, WatermarkEnabled = true,
         _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {},
     }, Window)
 
@@ -1058,7 +1072,10 @@ function NullLibrary:CreateWindow(options)
     end
     function window:SetSubtitle(text) self.SubtitleLabel.Text = text or self.SubtitleLabel.Text end
     function window:SetTabPosition(position) self:_layoutChrome(position) end
-    function window:Destroy() self.ScreenGui:Destroy() end
+    function window:Destroy()
+        if self.ScreenGui then self.ScreenGui:Destroy() end
+        if self.WatermarkGui then self.WatermarkGui:Destroy() end
+    end
     
     function window:SetWatermark(text, icon) 
         if text then self.WatermarkText.Text = text end
@@ -1067,6 +1084,10 @@ function NullLibrary:CreateWindow(options)
             self.WatermarkIcon.Image = img
             self.WatermarkIcon.Visible = img ~= ""
         end
+    end
+    function window:SetWatermarkVisible(enabled)
+        self.WatermarkEnabled = enabled ~= false
+        self.Watermark.Visible = self.WatermarkEnabled
     end
 
     function window:_disconnectPopupConnections()
@@ -1232,9 +1253,11 @@ function NullLibrary:CreateWindow(options)
 
         for _, tab in ipairs(self.Tabs) do
             local active = tab == targetTab
+            local frameTransparency = horizontalMode and 1 or (active and 0.25 or 0.45)
+            local iconTransparency = horizontalMode and 1 or (active and 0.15 or 0.35)
             tab.Page.Visible = active and true or false
-            tween(tab.Frame, {BackgroundTransparency = 1}, instant and 0 or 0.2)
-            tween(tab.IconWrap, {BackgroundTransparency = 1}, instant and 0 or 0.2)
+            tween(tab.Frame, {BackgroundTransparency = frameTransparency}, instant and 0 or 0.2)
+            tween(tab.IconWrap, {BackgroundTransparency = iconTransparency}, instant and 0 or 0.2)
             
             local activeSize = horizontalMode and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 20)
             local inactiveSize = horizontalMode and UDim2.fromOffset(10, 2) or UDim2.fromOffset(2, 10)
@@ -1250,11 +1273,17 @@ function NullLibrary:CreateWindow(options)
         end
     end
 
-    local tabPositionChoices = {{Label = "Left", Value = "Left"}, {Label = "Right", Value = "Right"}, {Label = "Bottom", Value = "Bottom"}, {Label = "Top", Value = "Top"}}
+    local tabPositionChoices = {
+        {Label = "Left", Value = "Left", Icon = "lucide:panel-left"},
+        {Label = "Right", Value = "Right", Icon = "lucide:panel-right"},
+        {Label = "Bottom", Value = "Bottom", Icon = "lucide:panel-bottom"},
+        {Label = "Top", Value = "Top", Icon = "lucide:panel-top"}
+    }
     for _, choice in ipairs(tabPositionChoices) do
         local optionButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 32), Text = "", ZIndex = 16, Parent = settingsMenu})
         corner(optionButton, 6)
-        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), Text = choice.Label, TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = optionButton})
+        create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage(choice.Icon), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, ZIndex = 17, Parent = optionButton})
+        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -44, 1, 0), Text = choice.Label, TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = optionButton})
         optionButton.MouseButton1Click:Connect(function() settingsMenu.Visible = false window:_layoutChrome(choice.Value) end)
     end
     
@@ -1262,7 +1291,8 @@ function NullLibrary:CreateWindow(options)
     create("Frame", {BackgroundTransparency=1, Size=UDim2.new(1,0,0,4), ZIndex=16, Parent=settingsMenu})
     local wmToggleBtn = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 36), Text = "", ZIndex = 16, Parent = settingsMenu})
     corner(wmToggleBtn, 6)
-    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -40, 1, 0), Text = "Watermark", TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = wmToggleBtn})
+    create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:badge"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(14, 14), ScaleType = Enum.ScaleType.Fit, ZIndex = 17, Parent = wmToggleBtn})
+    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(30, 0), Size = UDim2.new(1, -60, 1, 0), Text = "Watermark", TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = wmToggleBtn})
     local wmTrack = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = self.Theme.AccentSoft, BackgroundTransparency = 0.2, Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(32, 16), ZIndex=17, Parent = wmToggleBtn})
     corner(wmTrack, 999)
     local wmKnob = create("Frame", {AnchorPoint = Vector2.new(0, 0.5), BackgroundColor3 = self.Theme.Text, Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(14, 14), ZIndex=18, Parent = wmTrack})
@@ -1273,7 +1303,7 @@ function NullLibrary:CreateWindow(options)
         wmState = not wmState
         tween(wmTrack, {BackgroundColor3 = wmState and self.Theme.AccentSoft or self.Theme.SurfaceAccent}, 0.2)
         tween(wmKnob, {Position = wmState and UDim2.new(1, -16, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)}, 0.2)
-        window.Watermark.Visible = wmState
+        window:SetWatermarkVisible(wmState)
         settingsMenu.Visible = false
     end)
 
@@ -1355,6 +1385,14 @@ function NullLibrary:CreateWindow(options)
     
     task.defer(function()
         window:_layoutChrome(window.TabPosition)
+        local baseSize = window.CurrentSize
+        window.CurrentSize = Vector2.new(baseSize.X + 2, baseSize.Y + 1)
+        window:_applyRootSize()
+        task.delay(0.06, function()
+            if not window.Root or not window.Root.Parent then return end
+            window.CurrentSize = baseSize
+            window:_applyRootSize()
+        end)
     end)
 
     if options.WelcomeNotification ~= false then task.delay(0.08, function() window:Notify({Title = options.Title or "Null", Content = "UI launched successfully.", Icon = options.Icon, Duration = 3, Color = self.Theme.Good}) end) end
