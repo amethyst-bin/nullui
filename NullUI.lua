@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.5"
+    Version = "4.6"
 }
 
 local Players = game:GetService("Players")
@@ -116,7 +116,9 @@ local function clampRound(value)
 end
 
 local function normalizeSetArgs(selfOrValue, maybeValue, maybeSkip)
-    if type(selfOrValue) == "table" then return maybeValue, maybeSkip end
+    if type(selfOrValue) == "table" and selfOrValue.Window ~= nil then
+        return maybeValue, maybeSkip
+    end
     return selfOrValue, maybeValue
 end
 
@@ -852,7 +854,6 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end)
 
         local controller = {Window = self.Window}
-        
         local function parseColorValue(value, fallbackAlpha)
             local parsedColor = nil
             local parsedAlpha = tonumber(fallbackAlpha)
@@ -888,12 +889,12 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             parsedAlpha = math.clamp(parsedAlpha, 0, 1)
             return parsedColor, parsedAlpha
         end
-        
+
         function controller:Set(s, v, sk)
             local newValue, skip = normalizeSetArgs(s, v, sk)
-            local parsedColor, parsedAlpha = parseColorValue(newValue, v)
+            local parsedColor, parsedAlpha = parseColorValue(newValue, alpha)
             if parsedColor then color = parsedColor end
-            alpha = parsedAlpha
+            if parsedAlpha then alpha = parsedAlpha end
             hue, sat, val = Color3.toHSV(color)
             updatePreview()
             controller.Window.Flags[flag] = encode(color, alpha)
@@ -901,6 +902,15 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end
         function controller:Get() return encode(color, alpha) end
         function controller:GetColor() return color, alpha end
+        function controller:Serialize()
+            return {"__NULLUI_COLOR_RGBA__", color.R, color.G, color.B, alpha}
+        end
+        function controller:Deserialize(savedValue, skip)
+            local parsedColor, parsedAlpha = parseColorValue(savedValue, alpha)
+            if parsedColor then
+                controller:Set({R = parsedColor.R, G = parsedColor.G, B = parsedColor.B, A = parsedAlpha}, skip == true)
+            end
+        end
 
         local function openPopup()
             local popup = self.Window:_createPopup(318, 262, button, Vector2.new(12, -110))
@@ -1269,7 +1279,13 @@ function NullLibrary:CreateWindow(options)
         if not flag then return controller end
         self.Elements[flag] = controller
         if defaultValue ~= nil and self.Flags[flag] == nil then self.Flags[flag] = defaultValue end
-        if self.PendingConfig and self.PendingConfig[flag] ~= nil and controller and controller.Set then controller:Set(self.PendingConfig[flag], true) end
+        if self.PendingConfig and self.PendingConfig[flag] ~= nil and controller then 
+            if controller.Deserialize then
+                controller:Deserialize(self.PendingConfig[flag], true)
+            elseif controller.Set then
+                controller:Set(self.PendingConfig[flag], true)
+            end
+        end
         return controller
     end
 
