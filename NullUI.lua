@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.1"
+    Version = "4.2"
 }
 
 local Players = game:GetService("Players")
@@ -245,6 +245,12 @@ NullLibrary.ThemePresets = {
         SurfaceRaised = Color3.fromRGB(8, 8, 8), SurfaceAccent = Color3.fromRGB(14, 14, 14), Text = Color3.fromRGB(246, 246, 246),
         Muted = Color3.fromRGB(154, 154, 154), Stroke = Color3.fromRGB(38, 38, 38), AccentSoft = Color3.fromRGB(255, 255, 255),
         Good = Color3.fromRGB(119, 230, 165), Bad = Color3.fromRGB(255, 100, 120),
+    },
+    Yoxi = {
+        Background = Color3.fromRGB(22, 8, 11), Surface = Color3.fromRGB(22, 8, 11), SurfaceSoft = Color3.fromRGB(18, 6, 9),
+        SurfaceRaised = Color3.fromRGB(36, 12, 17), SurfaceAccent = Color3.fromRGB(52, 18, 25), Text = Color3.fromRGB(255, 233, 238),
+        Muted = Color3.fromRGB(201, 142, 154), Stroke = Color3.fromRGB(108, 46, 60), AccentSoft = Color3.fromRGB(255, 86, 120),
+        Good = Color3.fromRGB(123, 234, 172), Bad = Color3.fromRGB(255, 92, 110),
     },
 }
 
@@ -1104,10 +1110,11 @@ function NullLibrary:CreateWindow(options)
     floatingLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
     local settingsMenu = create("Frame", {AnchorPoint = Vector2.new(1, 0), BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency=0.1, Position = UDim2.new(1, -18, 0, 60), Size = UDim2.fromOffset(188, 0), AutomaticSize = Enum.AutomaticSize.Y, Visible = false, ZIndex = 15, Parent = clip})
-    corner(settingsMenu, 8) stroke(settingsMenu, 0.5, 1) padding(settingsMenu, 8, 8)
+    local settingsMenuStroke = stroke(settingsMenu, 0.5, 1)
+    corner(settingsMenu, 8) padding(settingsMenu, 8, 8)
     list(settingsMenu, 6, false)
 
-    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 16), Text = "Tab Position", TextColor3 = self.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 16, Parent = settingsMenu})
+    local settingsTitleLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 16), Text = "Tab Position", TextColor3 = self.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 16, Parent = settingsMenu})
 
     local resizeHandle = create("TextButton", {AnchorPoint = Vector2.new(1, 1), AutoButtonColor = false, BackgroundTransparency = 1, Position = UDim2.new(1, -8, 1, -8), Size = UDim2.fromOffset(24, 24), Text = "", Parent = root})
     for index = 0, 2 do
@@ -1698,11 +1705,13 @@ function NullLibrary:CreateWindow(options)
         {Label = "Bottom", Value = "Bottom", Icon = "lucide:panel-bottom"},
         {Label = "Top", Value = "Top", Icon = "lucide:panel-top"}
     }
+    local tabPositionRows = {}
     for _, choice in ipairs(tabPositionChoices) do
         local optionButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 32), Text = "", ZIndex = 16, Parent = settingsMenu})
         corner(optionButton, 6)
-        create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage(choice.Icon), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, ZIndex = 17, Parent = optionButton})
-        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -44, 1, 0), Text = choice.Label, TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = optionButton})
+        local optionIcon = create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage(choice.Icon), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(10, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, ZIndex = 17, Parent = optionButton})
+        local optionLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -44, 1, 0), Text = choice.Label, TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = optionButton})
+        table.insert(tabPositionRows, {Button = optionButton, Icon = optionIcon, Label = optionLabel})
         optionButton.MouseButton1Click:Connect(function() settingsMenu.Visible = false window:_layoutChrome(choice.Value) end)
     end
     
@@ -1710,14 +1719,29 @@ function NullLibrary:CreateWindow(options)
     create("Frame", {BackgroundTransparency=1, Size=UDim2.new(1,0,0,4), ZIndex=16, Parent=settingsMenu})
     local wmToggleBtn = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 36), Text = "", ZIndex = 16, Parent = settingsMenu})
     corner(wmToggleBtn, 6)
-    create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:badge"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(14, 14), ScaleType = Enum.ScaleType.Fit, ZIndex = 17, Parent = wmToggleBtn})
-    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(30, 0), Size = UDim2.new(1, -60, 1, 0), Text = "Watermark", TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = wmToggleBtn})
+    local wmToggleIcon = create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:badge"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(14, 14), ScaleType = Enum.ScaleType.Fit, ZIndex = 17, Parent = wmToggleBtn})
+    local wmToggleLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(30, 0), Size = UDim2.new(1, -60, 1, 0), Text = "Watermark", TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = wmToggleBtn})
     local wmTrack = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = self.Theme.AccentSoft, BackgroundTransparency = 0.2, Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(32, 16), ZIndex=17, Parent = wmToggleBtn})
     corner(wmTrack, 999)
     local wmKnob = create("Frame", {AnchorPoint = Vector2.new(0, 0.5), BackgroundColor3 = self.Theme.Text, Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(14, 14), ZIndex=18, Parent = wmTrack})
     corner(wmKnob, 999)
 
     local wmState = true
+    window:_bindTheme(function(theme)
+        settingsMenu.BackgroundColor3 = theme.SurfaceSoft
+        settingsMenuStroke.Color = theme.Stroke
+        settingsTitleLabel.TextColor3 = theme.Muted
+        for _, row in ipairs(tabPositionRows) do
+            row.Button.BackgroundColor3 = theme.SurfaceRaised
+            row.Icon.ImageColor3 = theme.Muted
+            row.Label.TextColor3 = theme.Text
+        end
+        wmToggleBtn.BackgroundColor3 = theme.SurfaceRaised
+        wmToggleIcon.ImageColor3 = theme.Muted
+        wmToggleLabel.TextColor3 = theme.Text
+        wmTrack.BackgroundColor3 = wmState and theme.AccentSoft or theme.SurfaceAccent
+        wmKnob.BackgroundColor3 = theme.Text
+    end)
     wmToggleBtn.MouseButton1Click:Connect(function()
         wmState = not wmState
         tween(wmTrack, {BackgroundColor3 = wmState and self.Theme.AccentSoft or self.Theme.SurfaceAccent}, 0.2)
