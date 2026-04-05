@@ -1,70 +1,70 @@
 local NullLib = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ginzuss/nullui/refs/heads/main/NullUI.lua"))()
 
 local Window = NullLib:CreateWindow({
-    Name = "NullUI_Example",
-    Title = "Null",
-    Subtitle = "minimal smooth utility ui",
-    BadgeText = "BETA",
-    Icon = "rbxassetid://7733658504",
-    ToggleKey = Enum.KeyCode.RightControl,
+    Name = "NullUI",
+    Title = "Null UI",
+    Subtitle = "yomkamadeit",
+    BadgeText = "v4.6",
+    Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
+    WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
+    ToggleKey = Enum.KeyCode.B,
     ConfigFolder = "NullUI",
     ConfigName = "ExampleConfig",
-    TabPosition = "Left",
+    TabPosition = "Bottom",
     WelcomeNotification = true
 })
 
+
+local RS = game:GetService("RunService")
+local Player = game:GetService("Players").LocalPlayer
+local fps = 60
+RS.RenderStepped:Connect(function(deltaTime)
+    fps = math.floor(1 / deltaTime)
+    -- You can change the text, or you can use text + a new image: Window:SetWatermark("text", "link")
+    Window:SetWatermark(string.format("Null V3.7 | User: %s | FPS: %d", Player.Name, fps))
+end)
+
 local MainTab = Window:CreateTab({
     Name = "Main",
-    Icon = "lucide:home",
-    Description = "core controls"
+    Icon = "house",
+    Description = "Some main things"
 })
 
 local MediaTab = Window:CreateTab({
     Name = "Media",
-    Icon = "lucide:image",
-    Description = "images and style"
+    Icon = "image",
+    Description = "Some media things"
 })
 
 local ConfigTab = Window:CreateTab({
     Name = "Configs",
-    Icon = "lucide:settings-2",
-    Description = "save and autoload"
+    Icon = "settings-2",
+    Description = "Some config things"
 })
 
-local MainSection = MainTab:CreateSection({
-    Title = "Starter Controls",
-    Description = "Пример новой версии NullUI с анимациями, адаптивом, уведомлениями и конфигами."
+local LeftSection = MainTab:CreateSection({
+    Title = "Mazafaka",
+    Description = "blah blah blah",
+    Side = "Left" -- choose side here Left or Right
 })
 
-MainSection:AddParagraph(
-    "NullUI",
-    "Теперь UI без затемнения, с более строгим минималистичным дизайном, отдельным popup dropdown и встроенным выбором позиции вкладок."
-)
+LeftSection:AddParagraph("Test text yomkayomkayomkayomka")
 
-MainSection:AddButton({
+LeftSection:AddButton({
     Text = "Show Notification",
-    Icon = "rbxassetid://7733658504",
+    Icon = "check-circle",
     Callback = function()
         Window:Notify({
-            Title = "NullUI",
-            Content = "Уведомления теперь адаптивные и нормально выглядят и на телефоне, и на ПК.",
-            Icon = "rbxassetid://7733658504",
-            Duration = 4
+            Title = "Success!",
+            Content = "Yay!",
+            Icon = "check",
+            Duration = 4,
+            Color = NullLib.Theme.Good
         })
     end
 })
 
-local AutoFarm = MainSection:AddToggle({
-    Text = "Auto Farm",
-    Description = "Пример тумблера с сохранением в конфиг.",
-    Flag = "AutoFarm",
-    Default = false,
-    Callback = function(state)
-        print("Auto Farm:", state)
-    end
-})
-
-local WalkSpeed = MainSection:AddSlider({
+local WalkSpeed = LeftSection:AddSlider({
     Text = "WalkSpeed",
     Flag = "WalkSpeed",
     Min = 16,
@@ -75,16 +75,43 @@ local WalkSpeed = MainSection:AddSlider({
     end
 })
 
-local Nickname = MainSection:AddTextbox({
-    Placeholder = "Nickname / key / text",
-    Flag = "Nickname",
-    Default = "Null User",
-    Callback = function(text)
-        print("Textbox:", text)
+local RightSection = MainTab:CreateSection({
+    Title = "ajghwshbhbvergvefe",
+    Description = "blah blah blah",
+    Side = "Right"
+})
+
+local AutoFarm = RightSection:AddToggle({
+    Text = "Auto Farm",
+    Description = "just a toggle lol",
+    Flag = "AutoFarm",
+    Default = false,
+    Callback = function(state)
+        print("Auto Farm:", state)
     end
 })
 
-local Mode = MainSection:AddDropdown({
+local EspEnabled = RightSection:AddToggle({
+    Text = "Enable ESP",
+    Description = "example toggle for visual color",
+    Flag = "EnableESP",
+    Default = true,
+    Callback = function(state)
+        print("ESP Enabled:", state)
+    end
+})
+
+local EspColor = RightSection:AddColorPicker({
+    Text = "ESP Color",
+    Flag = "ESPColor",
+    DefaultColor = Color3.fromRGB(255, 90, 90),
+    DefaultAlpha = 0.85,
+    Callback = function(color, alpha)
+        print("ESP Color:", color, "Alpha:", alpha)
+    end
+})
+
+local Mode = RightSection:AddDropdown({
     Text = "Target Mode",
     Flag = "TargetMode",
     Values = {"Closest", "Random", "Low HP", "Behind Wall"},
@@ -94,81 +121,197 @@ local Mode = MainSection:AddDropdown({
     end
 })
 
+local Nickname = RightSection:AddTextbox({
+    Placeholder = "Target Nickname...",
+    Flag = "TargetNick",
+    Default = "Yomka",
+    Callback = function(text)
+        print("Textbox:", text)
+    end
+})
+
 local MediaSection = MediaTab:CreateSection({
-    Title = "Images",
-    Description = "Можно ставить картинки в табы, в шапку окна и как отдельные элементы внутри секций."
+    Title = "Images & Visuals",
+    Description = "sup broski",
+    Side = "Left"
 })
 
 MediaSection:AddImage({
-    Image = "https://i.pinimg.com/736x/29/a0/99/29a099ff1e87f0acf4de1705a751c9d4.jpg",
-    Height = 150,
-    Caption = "Пример картинки по прямой ссылке."
-})
-
-MediaSection:AddImage({
-    ID = 7206946128,
-    Height = 120,
-    Caption = "Пример картинки по Roblox asset id."
-})
-
-MediaSection:AddButton({
-    Text = "Change Header Icon",
-    Callback = function()
-        Window:SetTitle("Null", "rbxassetid://7733779610")
-        Window:Notify({
-            Title = "Header Updated",
-            Content = "Иконка возле названия окна обновлена.",
-            Icon = "rbxassetid://7733779610"
-        })
-    end
-})
-
-MediaSection:AddButton({
-    Text = "Test Set Methods",
-    Callback = function()
-        AutoFarm:Set(true)
-        WalkSpeed:Set(75)
-        Nickname:Set("Loaded Name")
-        Mode:Set("Low HP")
-    end
+    Image = "https://i.pinimg.com/736x/53/22/cc/5322cc580a42baaa36a7d76d721339c7.jpg",
+    Height = 200,
+    ScaleType = Enum.ScaleType.Crop, 
+    Caption = "yomkawashere"
 })
 
 local ConfigSection = ConfigTab:CreateSection({
-    Title = "Configs",
-    Description = "Сохраняй, загружай и включай автозагрузку конфига."
+    Title = "Configs Manager",
+    Description = "Configs Stuff Here",
+    Side = "Left"
 })
+
+local ThemeSection = ConfigTab:CreateSection({
+    Title = "Themes",
+    Description = "Pick a style preset",
+    Side = "Right"
+})
+
+local RawThemeNames = NullLib:ListThemes()
+local ThemeDisplayToRaw = {}
+local ThemeNames = {}
+for _, rawName in ipairs(RawThemeNames) do
+    local displayName = rawName == "Null" and "Null (Default)" or rawName
+    ThemeDisplayToRaw[displayName] = rawName
+    table.insert(ThemeNames, displayName)
+end
+
+local ThemeDropdown = ThemeSection:AddDropdown({
+    Text = "Theme",
+    Flag = "ThemePreset",
+    Values = ThemeNames,
+    Default = "Null (Default)",
+    Callback = function(value)
+        print("Theme selected:", tostring(value))
+    end
+})
+
+ThemeSection:AddButton({
+    Text = "Apply Theme",
+    Icon = "palette",
+    Callback = function()
+        local selectedDisplay = tostring(ThemeDropdown:Get() or "Null (Default)")
+        local rawName = ThemeDisplayToRaw[selectedDisplay] or "Null"
+        Window:SetThemeByName(rawName)
+    end
+})
+
+local ConfigNameBox = ConfigSection:AddTextbox({
+    Placeholder = "Config name...",
+    Flag = "ConfigNameInput",
+    Default = Window.ConfigName or "ExampleConfig",
+    Callback = function(text)
+        local name = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if name ~= "" then
+            Window.ConfigName = name
+        end
+    end
+})
+
+local function getCurrentConfigName()
+    local typed = tostring(ConfigNameBox:Get() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if typed ~= "" then Window.ConfigName = typed end
+    return Window.ConfigName
+end
 
 ConfigSection:AddButton({
     Text = "Save Config",
+    Icon = "save",
     Callback = function()
-        Window:SaveConfig("ExampleConfig")
+        Window:SaveConfig(getCurrentConfigName())
     end
 })
 
 ConfigSection:AddButton({
     Text = "Load Config",
+    Icon = "download",
     Callback = function()
-        Window:LoadConfig("ExampleConfig")
+        Window:LoadConfig(getCurrentConfigName())
+    end
+})
+
+local function getConfigValues()
+    local configs = Window:RefreshConfigs()
+    if #configs == 0 then configs = {"None"} end
+    return configs
+end
+
+local ConfigList = ConfigSection:AddDropdown({
+    Text = "Config List",
+    Flag = "ConfigList",
+    Values = getConfigValues(),
+    Default = Window.ConfigName or getConfigValues()[1],
+    Callback = function(value)
+        if tostring(value) == "None" then return end
+        Window.ConfigName = tostring(value)
+        ConfigNameBox:Set(Window.ConfigName, true)
+    end
+})
+
+local function refreshConfigList(keepSelection)
+    ConfigList:SetValues(getConfigValues(), keepSelection ~= false)
+end
+
+ConfigSection:AddButton({
+    Text = "Refresh Configs",
+    Icon = "rotate-cw",
+    Callback = function()
+        refreshConfigList(true)
+        Window:Notify({
+            Title = "Configs",
+            Content = "Updated!",
+            Icon = "refresh-cw",
+            Color = NullLib.Theme.AccentSoft
+        })
+    end
+})
+
+local refreshAutoloadStatus
+
+ConfigSection:AddButton({
+    Text = "Enable Autoload",
+    Icon = "power",
+    Callback = function()
+        Window:SetAutoloadConfig(Window.ConfigName, true)
+        if refreshAutoloadStatus then refreshAutoloadStatus() end
     end
 })
 
 ConfigSection:AddButton({
-    Text = "Enable Auto Load",
+    Text = "Delete Selected Config",
+    Icon = "trash-2",
     Callback = function()
-        Window:EnableAutoLoad("ExampleConfig")
+        local selected = tostring(ConfigList:Get() or Window.ConfigName or "")
+        selected = selected:gsub("^%s+", ""):gsub("%s+$", "")
+        if selected == "" or selected == "None" then
+            Window:Notify({
+                Title = "Configs",
+                Content = "No config selected.",
+                Icon = "alert-circle",
+                Color = NullLib.Theme.Bad
+            })
+            return
+        end
+
+        local ok = Window:DeleteConfig(selected)
+        if ok then
+            refreshConfigList(false)
+            local values = getConfigValues()
+            local nextName = values[1] and values[1] ~= "None" and values[1] or selected
+            Window.ConfigName = nextName
+            ConfigNameBox:Set(nextName, true)
+            refreshAutoloadStatus()
+        end
     end
 })
 
+local AutoloadStatusLabel = ConfigSection:AddLabel("")
+
+refreshAutoloadStatus = function()
+    local state = Window:GetAutoloadState()
+    local configName = state.Config or "none"
+    if state.Enabled and state.Config then
+        AutoloadStatusLabel.Text = "Will autoload: " .. configName
+    else
+        AutoloadStatusLabel.Text = "Will autoload: none"
+    end
+end
+
 ConfigSection:AddButton({
-    Text = "Disable Auto Load",
+    Text = "Disable Autoload",
+    Icon = "power-off",
     Callback = function()
-        Window:DisableAutoLoad()
+        Window:DisableAutoload()
+        refreshAutoloadStatus()
     end
 })
 
-ConfigSection:AddButton({
-    Text = "Print Config Names",
-    Callback = function()
-        print("Configs:", table.concat(Window:ListConfigs(), ", "))
-    end
-})
+refreshAutoloadStatus()
