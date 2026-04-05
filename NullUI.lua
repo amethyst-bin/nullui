@@ -12,7 +12,7 @@ AccentSoft = Color3.fromRGB(140, 160, 255),
 Good = Color3.fromRGB(80, 255, 160),
 Bad = Color3.fromRGB(255, 80, 100),
 },
-Version = "3.3 Glass"
+Version = "3.4"
 }
 
 local Players = game:GetService("Players")
@@ -732,9 +732,7 @@ corner(settingsButton, 6) stroke(settingsButton, 0.6, 1)
 local hideButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "-", TextColor3 = self.Theme.Muted, TextSize = 18, Font = Enum.Font.GothamBold, Parent = controls})
 corner(hideButton, 6) stroke(hideButton, 0.6, 1)
 
-local sidebar = create("Frame", {BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(18, 84), Size = UDim2.new(0, 190, 1, -102), Parent = clip})
-sidebar.BackgroundColor3 = self.Theme.Background
-sidebar.BackgroundTransparency = 1
+local sidebar = create("Frame", {BackgroundColor3 = self.Theme.Background, BackgroundTransparency = 0.2, Position = UDim2.fromOffset(18, 84), Size = UDim2.new(0, 190, 1, -102), Parent = clip})
 corner(sidebar, 8) stroke(sidebar, 1, 1) padding(sidebar, 12, 12)
 
 local sidebarHeader = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = "", TextColor3 = self.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = sidebar})
@@ -748,9 +746,7 @@ corner(content, 8) stroke(content, 1, 1)
 local pages = create("Folder", {Name = "Pages", Parent = content})
 
 local floatingTabs = create("Frame", {BackgroundTransparency = 1, Visible = false, ZIndex = 5, Parent = root})
-local floatingTabsBar = create("CanvasGroup", {BackgroundColor3 = self.Theme.SurfaceSoft, BackgroundTransparency = 0.3, Size = UDim2.fromScale(1, 1), GroupTransparency = 0, Parent = floatingTabs})
-floatingTabsBar.BackgroundColor3 = self.Theme.Background
-floatingTabsBar.BackgroundTransparency = 1
+local floatingTabsBar = create("CanvasGroup", {BackgroundColor3 = self.Theme.Background, BackgroundTransparency = 0.2, Size = UDim2.fromScale(1, 1), GroupTransparency = 0, Parent = floatingTabs})
 corner(floatingTabsBar, 8) stroke(floatingTabsBar, 1, 1) padding(floatingTabsBar, 6, 6)
 
 local floatingHolder = create("Frame", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = floatingTabsBar})
@@ -1037,8 +1033,17 @@ end
 
 function window:_syncFloatingTabs()
     if not self.FloatingTabs.Visible then return end
-    local tabsCount = #self.Tabs
-    local barWidth = math.max(200, (tabsCount * 138) + 12)
+    local layoutObject = self.TabHolder and self.TabHolder:FindFirstChildOfClass("UIListLayout")
+    local spacing = layoutObject and layoutObject.Padding.Offset or 6
+    local totalWidth = 12
+    for _, tab in ipairs(self.Tabs) do
+        local width = tab.Button.AbsoluteSize.X > 0 and tab.Button.AbsoluteSize.X or tab.Button.Size.X.Offset
+        totalWidth = totalWidth + width
+    end
+    if #self.Tabs > 1 then
+        totalWidth = totalWidth + (spacing * (#self.Tabs - 1))
+    end
+    local barWidth = math.max(200, totalWidth)
     self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 48)
     self.FloatingTabs.Position = self.TabPosition == "Top" and UDim2.new(0.5, 0, 0, -12) or UDim2.new(0.5, 0, 1, 12)
     self.FloatingTabs.AnchorPoint = self.TabPosition == "Top" and Vector2.new(0.5, 1) or Vector2.new(0.5, 0)
@@ -1090,6 +1095,15 @@ function window:_layoutChrome(mode)
     end
     for _, tab in ipairs(self.Tabs) do tab:SetLayout(mode) end
     self:_syncFloatingTabs()
+    task.defer(function()
+        if not self.Root or not self.Root.Parent then return end
+        for _, tab in ipairs(self.Tabs) do tab:SetLayout(mode) end
+        self:_syncFloatingTabs()
+    end)
+    task.delay(0.05, function()
+        if not self.Root or not self.Root.Parent then return end
+        self:_syncFloatingTabs()
+    end)
 end
 
 function window:CreateTab(tabOptions, maybeIcon)
@@ -1201,6 +1215,12 @@ resizeHandle.InputBegan:Connect(function(input)
                 if dropConn then dropConn:Disconnect() end
             end
         end)
+    end
+end)
+
+root:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    if window.TabPosition == "Top" or window.TabPosition == "Bottom" then
+        window:_syncFloatingTabs()
     end
 end)
 
