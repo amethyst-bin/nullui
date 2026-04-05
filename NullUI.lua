@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.0"
+    Version = "4.1"
 }
 
 local Players = game:GetService("Players")
@@ -233,6 +233,18 @@ NullLibrary.ThemePresets = {
         SurfaceRaised = Color3.fromRGB(23, 40, 37), SurfaceAccent = Color3.fromRGB(30, 54, 50), Text = Color3.fromRGB(228, 249, 244),
         Muted = Color3.fromRGB(152, 194, 183), Stroke = Color3.fromRGB(72, 109, 101), AccentSoft = Color3.fromRGB(93, 233, 197),
         Good = Color3.fromRGB(112, 239, 187), Bad = Color3.fromRGB(255, 104, 130),
+    },
+    Snow = {
+        Background = Color3.fromRGB(246, 248, 252), Surface = Color3.fromRGB(246, 248, 252), SurfaceSoft = Color3.fromRGB(240, 243, 249),
+        SurfaceRaised = Color3.fromRGB(232, 237, 246), SurfaceAccent = Color3.fromRGB(221, 229, 241), Text = Color3.fromRGB(20, 26, 38),
+        Muted = Color3.fromRGB(96, 109, 133), Stroke = Color3.fromRGB(177, 190, 214), AccentSoft = Color3.fromRGB(74, 116, 255),
+        Good = Color3.fromRGB(44, 178, 118), Bad = Color3.fromRGB(230, 78, 98),
+    },
+    Blackout = {
+        Background = Color3.fromRGB(2, 2, 2), Surface = Color3.fromRGB(2, 2, 2), SurfaceSoft = Color3.fromRGB(4, 4, 4),
+        SurfaceRaised = Color3.fromRGB(8, 8, 8), SurfaceAccent = Color3.fromRGB(14, 14, 14), Text = Color3.fromRGB(246, 246, 246),
+        Muted = Color3.fromRGB(154, 154, 154), Stroke = Color3.fromRGB(38, 38, 38), AccentSoft = Color3.fromRGB(255, 255, 255),
+        Good = Color3.fromRGB(119, 230, 165), Bad = Color3.fromRGB(255, 100, 120),
     },
 }
 
@@ -489,10 +501,13 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
     local parentColumn = side == "Right" and self.RightColumn or self.LeftColumn
 
     local card = create("Frame", {AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = NullLibrary.Theme.SurfaceSoft, BackgroundTransparency = 0.5, Size = UDim2.new(1, 0, 0, 0), Parent = parentColumn})
-    corner(card, 6) stroke(card, 0.6, 1) padding(card, 16, 16)
+    corner(card, 6) local cardStroke = stroke(card, 0.6, 1) padding(card, 16, 16)
 
-    autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = sectionOptions.Title or "Section", TextColor3 = NullLibrary.Theme.Text, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, Parent = card}))
-    if sectionOptions.Description and sectionOptions.Description ~= "" then autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 0), Text = sectionOptions.Description, TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = card})) end
+    local sectionTitleLabel = autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = sectionOptions.Title or "Section", TextColor3 = NullLibrary.Theme.Text, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, Parent = card}))
+    local sectionDescriptionLabel = nil
+    if sectionOptions.Description and sectionOptions.Description ~= "" then
+        sectionDescriptionLabel = autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 0), Text = sectionOptions.Description, TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = card}))
+    end
 
     local holder = create("Frame", {AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, sectionOptions.Description and sectionOptions.Description ~= "" and 54 or 30), Size = UDim2.new(1, 0, 0, 0), Parent = card})
     list(holder, 8, false)
@@ -500,21 +515,38 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
     local section = {Window = windowRef}
 
     local function register(flag, controller, defaultValue) return windowRef:_registerFlag(flag, controller, defaultValue) end
+    local function bindTheme(fn) return windowRef:_bindTheme(fn) end
 
-    function section:AddLabel(text) return autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Size = UDim2.new(1, 0, 0, 0), Text = text or "Label", TextColor3 = NullLibrary.Theme.Muted, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = holder})) end
+    bindTheme(function(theme)
+        card.BackgroundColor3 = theme.SurfaceSoft
+        cardStroke.Color = theme.Stroke
+        sectionTitleLabel.TextColor3 = theme.Text
+        if sectionDescriptionLabel then sectionDescriptionLabel.TextColor3 = theme.Muted end
+    end)
+
+    function section:AddLabel(text)
+        local label = autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Size = UDim2.new(1, 0, 0, 0), Text = text or "Label", TextColor3 = NullLibrary.Theme.Muted, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = holder}))
+        bindTheme(function(theme) label.TextColor3 = theme.Muted end)
+        return label
+    end
 
     function section:AddParagraph(titleText, bodyText)
         local paragraph = create("Frame", {AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = NullLibrary.Theme.SurfaceRaised, BackgroundTransparency = 0.5, Size = UDim2.new(1, 0, 0, 0), Parent = holder})
         corner(paragraph, 6) padding(paragraph, 12, 10)
-        autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = titleText or "Info", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = paragraph}))
-        autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(0, 20), Size = UDim2.new(1, 0, 0, 0), Text = bodyText or "", TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = paragraph}))
+        local paragraphTitle = autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = titleText or "Info", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = paragraph}))
+        local paragraphBody = autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(0, 20), Size = UDim2.new(1, 0, 0, 0), Text = bodyText or "", TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = paragraph}))
+        bindTheme(function(theme)
+            paragraph.BackgroundColor3 = theme.SurfaceRaised
+            paragraphTitle.TextColor3 = theme.Text
+            paragraphBody.TextColor3 = theme.Muted
+        end)
         return paragraph
     end
 
     function section:AddImage(options)
         options = options or {}
         local frame = create("Frame", {AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = NullLibrary.Theme.SurfaceRaised, BackgroundTransparency = 0.5, Size = UDim2.new(1, 0, 0, 0), Parent = holder})
-        corner(frame, 6) stroke(frame, 0.6, 1) padding(frame, 8, 8)
+        corner(frame, 6) local frameStroke = stroke(frame, 0.6, 1) padding(frame, 8, 8)
         
         local imgSource = normalizeImage(options.Image or options.Url or options.ID)
         local baseScale = options.ScaleType or Enum.ScaleType.Crop
@@ -536,7 +568,14 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             end)
         end
 
-        if options.Caption and options.Caption ~= "" then autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(0, (options.Height or 140) + 10), Size = UDim2.new(1, 0, 0, 0), Text = options.Caption, TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame})) end
+        local captionLabel = nil
+        if options.Caption and options.Caption ~= "" then captionLabel = autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(0, (options.Height or 140) + 10), Size = UDim2.new(1, 0, 0, 0), Text = options.Caption, TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Parent = frame})) end
+        bindTheme(function(theme)
+            frame.BackgroundColor3 = theme.SurfaceRaised
+            frameStroke.Color = theme.Stroke
+            image.BackgroundColor3 = theme.SurfaceAccent
+            if captionLabel then captionLabel.TextColor3 = theme.Muted end
+        end)
         return image
     end
 
@@ -546,8 +585,14 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         local button, outline = NullLibrary:_createCardButton(buttonWrap, options.Height or 38)
         local showIcon = options.Icon ~= nil
 
-        create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage(options.Icon), Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(20, 20), ScaleType = Enum.ScaleType.Fit, Visible = showIcon, Parent = button})
-        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(showIcon and 40 or 14, 0), Size = UDim2.new(1, showIcon and -52 or -28, 1, 0), Text = options.Text or "Button", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Parent = button})
+        local iconLabel = create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage(options.Icon), Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(20, 20), ScaleType = Enum.ScaleType.Fit, Visible = showIcon, Parent = button})
+        local textLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(showIcon and 40 or 14, 0), Size = UDim2.new(1, showIcon and -52 or -28, 1, 0), Text = options.Text or "Button", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Parent = button})
+        bindTheme(function(theme)
+            button.BackgroundColor3 = theme.SurfaceRaised
+            outline.Color = theme.Stroke
+            textLabel.TextColor3 = theme.Text
+            iconLabel.ImageColor3 = theme.Text
+        end)
 
         button.InputBegan:Connect(function(i) 
             if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then 
@@ -571,8 +616,9 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         local state = options.Default or false
 
         local button = NullLibrary:_createCardButton(holder, 44)
-        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 6), Size = UDim2.new(1, -78, 0, 16), Text = options.Text or "Toggle", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = button})
-        if options.Description and options.Description ~= "" then create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(14, 22), Size = UDim2.new(1, -78, 0, 14), Text = options.Description, TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Parent = button}) end
+        local titleLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 6), Size = UDim2.new(1, -78, 0, 16), Text = options.Text or "Toggle", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = button})
+        local descLabel = nil
+        if options.Description and options.Description ~= "" then descLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(14, 22), Size = UDim2.new(1, -78, 0, 14), Text = options.Description, TextColor3 = NullLibrary.Theme.Muted, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Parent = button}) end
 
         local track = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = state and NullLibrary.Theme.AccentSoft or NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.2, Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(42, 22), Parent = button})
         corner(track, 999)
@@ -589,6 +635,13 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             if not skip and options.Callback then task.spawn(options.Callback, state) end
         end
         function controller:Get() return state end
+        bindTheme(function(theme)
+            button.BackgroundColor3 = theme.SurfaceRaised
+            titleLabel.TextColor3 = theme.Text
+            if descLabel then descLabel.TextColor3 = theme.Muted end
+            track.BackgroundColor3 = state and theme.AccentSoft or theme.SurfaceAccent
+            knob.BackgroundColor3 = theme.Text
+        end)
 
         button.MouseButton1Click:Connect(function() controller:Set(not state) end)
         register(flag, controller, state) controller:Set(state, true)
@@ -602,9 +655,9 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         val = math.clamp(val, min, max)
 
         local frame = create("Frame", {BackgroundColor3 = NullLibrary.Theme.SurfaceRaised, BackgroundTransparency = 0.5, Size = UDim2.new(1, 0, 0, 72), Parent = holder})
-        corner(frame, 6) stroke(frame, 0.6, 1)
+        corner(frame, 6) local frameStroke = stroke(frame, 0.6, 1)
 
-        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -88, 0, 16), Text = options.Text or "Slider", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame})
+        local sliderLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -88, 0, 16), Text = options.Text or "Slider", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame})
         local number = create("TextLabel", {AnchorPoint = Vector2.new(1, 0), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Position = UDim2.new(1, -14, 0, 10), Size = UDim2.fromOffset(64, 16), Text = tostring(val), TextColor3 = NullLibrary.Theme.AccentSoft, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Parent = frame})
 
         local track = create("Frame", {BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.3, Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 8), Parent = frame})
@@ -631,6 +684,15 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             if not skip and options.Callback then task.spawn(options.Callback, val) end
         end
         function controller:Get() return val end
+        bindTheme(function(theme)
+            frame.BackgroundColor3 = theme.SurfaceRaised
+            frameStroke.Color = theme.Stroke
+            sliderLabel.TextColor3 = theme.Text
+            number.TextColor3 = theme.AccentSoft
+            track.BackgroundColor3 = theme.SurfaceAccent
+            fill.BackgroundColor3 = theme.AccentSoft
+            knob.BackgroundColor3 = theme.Text
+        end)
 
         local function update(pos) controller:Set(min + ((max - min) * ((pos.X - track.AbsolutePosition.X) / track.AbsoluteSize.X))) end
 
@@ -667,6 +729,12 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             if not skip and options.Callback then task.spawn(options.Callback, val, false) end
         end
         function controller:Get() return val end
+        bindTheme(function(theme)
+            frame.BackgroundColor3 = theme.SurfaceRaised
+            box.TextColor3 = theme.Text
+            box.PlaceholderColor3 = theme.Muted
+            if not box:IsFocused() then boxStroke.Color = theme.Stroke end
+        end)
 
         box.Focused:Connect(function() tween(boxStroke, {Color = NullLibrary.Theme.AccentSoft, Transparency = 0.2}, 0.2) end)
         box.FocusLost:Connect(function(e) tween(boxStroke, {Color = NullLibrary.Theme.Stroke, Transparency = 0.6}, 0.2) val = box.Text controller.Window.Flags[flag] = val if options.Callback then task.spawn(options.Callback, val, e) end end)
@@ -709,6 +777,11 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
                 controller:Set(vals[1], true, true)
             end
         end
+        bindTheme(function(theme)
+            button.BackgroundColor3 = theme.SurfaceRaised
+            label.TextColor3 = theme.Text
+            arrow.TextColor3 = theme.Muted
+        end)
 
         local function openPopup()
             arrow.Text = "v"
@@ -750,10 +823,10 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end
 
         local button = NullLibrary:_createCardButton(holder, 42)
-        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -68, 1, 0), Text = options.Text or "Color", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = button})
+        local pickerLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -68, 1, 0), Text = options.Text or "Color", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = button})
 
         local previewWrap = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.2, Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(36, 20), Parent = button})
-        corner(previewWrap, 6) stroke(previewWrap, 0.4, 1)
+        corner(previewWrap, 6) local previewStroke = stroke(previewWrap, 0.4, 1)
         local previewBg = create("Frame", {BackgroundColor3 = Color3.fromRGB(230, 230, 230), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = previewWrap})
         corner(previewBg, 6)
         create("UIGradient", {Rotation = 0, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 200, 200)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(235, 235, 235)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))}), Parent = previewBg})
@@ -764,6 +837,13 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             previewFill.BackgroundColor3 = color
             previewFill.BackgroundTransparency = 1 - alpha
         end
+
+        bindTheme(function(theme)
+            button.BackgroundColor3 = theme.SurfaceRaised
+            pickerLabel.TextColor3 = theme.Text
+            previewWrap.BackgroundColor3 = theme.SurfaceAccent
+            previewStroke.Color = theme.Stroke
+        end)
 
         local controller = {Window = self.Window}
         function controller:Set(s, v, sk)
@@ -1116,7 +1196,7 @@ function NullLibrary:CreateWindow(options)
         MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, HideButton = hideButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
         Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon, WatermarkBg = watermarkBg, WatermarkGui = watermarkGui, WatermarkEnabled = true,
         Badge = badge, BadgeLabel = badgeLabel, SettingsIcon = settingsIcon, HideIcon = hideIcon,
-        _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {},
+        _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {}, _themeBindings = {},
     }, Window)
 
     function window:_configDirectory() return self.ConfigFolder end
@@ -1150,6 +1230,13 @@ function NullLibrary:CreateWindow(options)
         if defaultValue ~= nil and self.Flags[flag] == nil then self.Flags[flag] = defaultValue end
         if self.PendingConfig and self.PendingConfig[flag] ~= nil and controller and controller.Set then controller:Set(self.PendingConfig[flag], true) end
         return controller
+    end
+
+    function window:_bindTheme(applyFn)
+        if type(applyFn) ~= "function" then return end
+        table.insert(self._themeBindings, applyFn)
+        local ok = pcall(applyFn, self.Library.Theme)
+        if not ok then return end
     end
 
     function window:_collectFlags()
@@ -1378,6 +1465,9 @@ function NullLibrary:CreateWindow(options)
             tab.GlyphLabel.TextColor3 = tab == self.CurrentTab and t.AccentSoft or t.Text
             tab.ImageLabel.ImageColor3 = tab == self.CurrentTab and t.AccentSoft or t.Text
             tab.ActiveLine.BackgroundColor3 = t.AccentSoft
+        end
+        for _, applyFn in ipairs(self._themeBindings) do
+            pcall(applyFn, t)
         end
         if self.CurrentTab then self:SelectTab(self.CurrentTab, true) end
     end
