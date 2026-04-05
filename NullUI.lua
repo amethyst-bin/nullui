@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "3.5 Perfect"
+    Version = "3.6 Dual Columns"
 }
 
 local Players = game:GetService("Players")
@@ -374,6 +374,8 @@ function Tab:SetLayout(mode)
     self.Button.Size = horizontal and UDim2.fromOffset(130, 36) or UDim2.new(1, 0, 0, 48)
     self.Frame.Size = UDim2.fromScale(1, 1)
 
+    local active = self.Window.CurrentTab == self
+
     if horizontal then
         self.IconWrap.Position = UDim2.fromOffset(6, 6)
         self.IconWrap.Size = UDim2.fromOffset(24, 24)
@@ -384,8 +386,11 @@ function Tab:SetLayout(mode)
         self.Label.Size = UDim2.new(1, -40, 1, 0)
         self.Label.TextSize = 12
         self.Description.Visible = false
+        
+        -- Полоска снизу
         self.ActiveLine.Position = UDim2.new(0.5, 0, 1, -2)
         self.ActiveLine.AnchorPoint = Vector2.new(0.5, 0)
+        self.ActiveLine.Size = active and UDim2.fromOffset(20, 2) or UDim2.fromOffset(10, 2)
     else
         self.IconWrap.Position = UDim2.fromOffset(8, 8)
         self.IconWrap.Size = UDim2.fromOffset(32, 32)
@@ -396,14 +401,20 @@ function Tab:SetLayout(mode)
         self.Label.Size = UDim2.new(1, -56, 0, 18)
         self.Label.TextSize = 13
         self.Description.Visible = self.Description.Text ~= ""
-        self.ActiveLine.Position = UDim2.fromOffset(8, 24)
-        self.ActiveLine.AnchorPoint = Vector2.new(0, 0)
+        
+        -- Полоска слева
+        self.ActiveLine.Position = UDim2.new(0, 0, 0.5, 0)
+        self.ActiveLine.AnchorPoint = Vector2.new(0, 0.5)
+        self.ActiveLine.Size = active and UDim2.fromOffset(2, 20) or UDim2.fromOffset(2, 10)
     end
 end
 
 function Tab:CreateSection(sectionOptions, maybeDescription)
     if type(sectionOptions) ~= "table" then sectionOptions = {Title = sectionOptions, Description = maybeDescription} end
-    local card = create("Frame", {AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = NullLibrary.Theme.SurfaceSoft, BackgroundTransparency = 0.5, Size = UDim2.new(1, 0, 0, 0), Parent = self.Page})
+    local side = sectionOptions.Side or "Left"
+    local parentColumn = side == "Right" and self.RightColumn or self.LeftColumn
+
+    local card = create("Frame", {AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = NullLibrary.Theme.SurfaceSoft, BackgroundTransparency = 0.5, Size = UDim2.new(1, 0, 0, 0), Parent = parentColumn})
     corner(card, 6) stroke(card, 0.6, 1) padding(card, 16, 16)
 
     autosizeText(create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 0), Text = sectionOptions.Title or "Section", TextColor3 = NullLibrary.Theme.Text, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, Parent = card}))
@@ -436,13 +447,8 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         local image = create("ImageLabel", {BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.5, Image = imgSource, Size = UDim2.new(1, 0, 0, options.Height or 140), ScaleType = baseScale, Parent = frame})
         corner(image, options.CornerRadius or 6)
 
-        -- Динамическая смена Crop/Fit в зависимости от ширины UI
         image:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            if image.AbsoluteSize.X < 360 then
-                image.ScaleType = Enum.ScaleType.Fit
-            else
-                image.ScaleType = baseScale
-            end
+            if image.AbsoluteSize.X < 360 then image.ScaleType = Enum.ScaleType.Fit else image.ScaleType = baseScale end
         end)
         task.spawn(function()
             RunService.RenderStepped:Wait()
@@ -776,40 +782,44 @@ function NullLibrary:CreateWindow(options)
     local mobileToggle = create("ImageButton", {AnchorPoint = Vector2.new(0, 1), AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceSoft, Image = normalizeImage(options.MobileToggleIcon or options.Icon), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.fromOffset(56, 56), Visible = false, Parent = screenGui})
     corner(mobileToggle, 8) stroke(mobileToggle, 0.4, 1)
 
-    -- NEW WATERMARK SYSTEM --
+    -- WATERMARK SYSTEM (INDEPENDENT) --
+    local wmIconSource = normalizeImage(options.WatermarkIcon or options.Icon or "rbxassetid://7733779610")
     local watermark = create("Frame", {
         BackgroundColor3 = self.Theme.Background,
         BackgroundTransparency = 0.2,
-        Position = UDim2.new(0, 16, 1, -16), -- В нижнем левом углу
+        Position = UDim2.new(0, 16, 1, -16), 
         AnchorPoint = Vector2.new(0, 1),
-        Size = UDim2.new(0, 220, 0, 38), -- Базовый размер, чтобы выглядела солидно
-        AutomaticSize = Enum.AutomaticSize.X, -- Будет расширяться при длинном тексте
+        Size = UDim2.new(0, 0, 0, 36),
+        AutomaticSize = Enum.AutomaticSize.X,
         Visible = true,
-        ZIndex = 100, -- Поверх всех остальных элементов экрана
+        ZIndex = 100, 
         Parent = screenGui
     })
     corner(watermark, 6) stroke(watermark, 0.4, 1, self.Theme.Text)
-    padding(watermark, 16, 0)
+    padding(watermark, 14, 0)
     local wmLayout = list(watermark, 8, true)
     wmLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     
     local wmIcon = create("ImageLabel", {
         BackgroundTransparency = 1,
-        Image = "rbxassetid://7733779610", -- Иконка для стиля
-        Size = UDim2.fromOffset(16, 16),
-        ImageColor3 = self.Theme.AccentSoft,
+        Image = wmIconSource,
+        Size = UDim2.fromOffset(20, 20),
+        Visible = wmIconSource ~= "",
+        ScaleType = Enum.ScaleType.Fit,
         Parent = watermark
     })
 
-    local watermarkTextLabel = autosizeText(create("TextLabel", {
+    local watermarkTextLabel = create("TextLabel", {
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamSemibold,
         Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        TextWrapped = false,
         Text = string.format("%s | %s", options.Title or "Null", options.Subtitle or "Watermark"),
         TextColor3 = self.Theme.Text,
         TextSize = 13,
         Parent = watermark
-    }))
+    })
 
     local window = setmetatable({
         Library = self, ScreenGui = screenGui, Root = root, PopupLayer = popupLayer, Sidebar = sidebar, Content = content, Pages = pages, TabHolder = tabHolder, FloatingTabs = floatingTabs, FloatingTabsBar = floatingTabsBar, FloatingHolder = floatingHolder,
@@ -817,7 +827,7 @@ function NullLibrary:CreateWindow(options)
         MinSize = options.MinSize or Vector2.new(420, 340), MaxSize = options.MaxSize or Vector2.new(1200, 900), CurrentSize = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(780, 520),
         UserResized = false, Open = true, StoredPosition = options.Position or UDim2.fromScale(0.5, 0.5), ToggleKey = options.ToggleKey or Enum.KeyCode.RightControl, Elements = {}, Flags = {}, PendingConfig = nil, ConfigFolder = options.ConfigFolder or "NullUI", ConfigName = options.ConfigName or name,
         MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
-        Watermark = watermark, WatermarkText = watermarkTextLabel,
+        Watermark = watermark, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon,
         _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {},
     }, Window)
 
@@ -1022,8 +1032,14 @@ function NullLibrary:CreateWindow(options)
     function window:SetTabPosition(position) self:_layoutChrome(position) end
     function window:Destroy() self.ScreenGui:Destroy() end
     
-    function window:SetWatermark(text) self.WatermarkText.Text = text end
-    function window:ToggleWatermark(state) self.Watermark.Visible = state end
+    function window:SetWatermark(text, icon) 
+        if text then self.WatermarkText.Text = text end
+        if icon ~= nil then
+            local img = normalizeImage(icon)
+            self.WatermarkIcon.Image = img
+            self.WatermarkIcon.Visible = img ~= ""
+        end
+    end
 
     function window:_disconnectPopupConnections()
         for _, connection in ipairs(self._popupConnections) do if connection and connection.Disconnect then connection:Disconnect() end end
@@ -1073,18 +1089,16 @@ function NullLibrary:CreateWindow(options)
     end
 
     function window:_syncFloatingTabs()
-        if not self.FloatingTabs.Visible then return end
+        if self.TabPosition ~= "Bottom" and self.TabPosition ~= "Top" then return end
         local count = #self.Tabs
         if count == 0 then return end
-        
-        -- Полностью математический точный расчёт ширины, багов быть не может.
-        -- Ширина одной вкладки = 130px. Паддинг между ними = 6px. Общий паддинг контейнера = 12px (6 слева и 6 справа).
         local totalWidth = (count * 130) + ((count - 1) * 6) + 12
         local barWidth = math.max(200, totalWidth)
-        
         self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 48)
         self.FloatingTabs.Position = self.TabPosition == "Top" and UDim2.new(0.5, 0, 0, -12) or UDim2.new(0.5, 0, 1, 12)
         self.FloatingTabs.AnchorPoint = self.TabPosition == "Top" and Vector2.new(0.5, 1) or Vector2.new(0.5, 0)
+        self.FloatingTabs.Visible = true
+        if self.Open then self.FloatingTabsBar.GroupTransparency = 0 end
     end
 
     function window:_layoutChrome(mode)
@@ -1117,11 +1131,10 @@ function NullLibrary:CreateWindow(options)
         elseif mode == "Bottom" or mode == "Top" then
             self.Content.Position = UDim2.fromOffset(18, top)
             self.Content.Size = UDim2.new(1, -36, 1, -102)
-            self.FloatingTabs.Visible = true
-            self.FloatingTabsBar.GroupTransparency = self.Open and 0 or 1
             tabHolder.Position = UDim2.new(0, 0, 0, 0)
             tabHolder.Size = UDim2.new(1, 0, 1, 0)
             tabHolder.Parent = self.FloatingHolder
+            self:_syncFloatingTabs()
         end
 
         local layoutObject = tabHolder:FindFirstChildOfClass("UIListLayout")
@@ -1132,7 +1145,6 @@ function NullLibrary:CreateWindow(options)
             layoutObject.VerticalAlignment = horizontalTabs and Enum.VerticalAlignment.Center or Enum.VerticalAlignment.Top
         end
         for _, tab in ipairs(self.Tabs) do tab:SetLayout(mode) end
-        self:_syncFloatingTabs()
     end
 
     function window:CreateTab(tabOptions, maybeIcon)
@@ -1154,10 +1166,29 @@ function NullLibrary:CreateWindow(options)
         local label = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(48, 8), Size = UDim2.new(1, -56, 0, 18), Text = tabOptions.Name or "Tab", TextColor3 = self.Library.Theme.Muted, TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame})
         local descriptionLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(48, 26), Size = UDim2.new(1, -56, 0, 14), Text = tabOptions.Description or "", TextColor3 = self.Library.Theme.Muted, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Visible = tabOptions.Description ~= nil and tabOptions.Description ~= "", Parent = frame})
         
+        -- СИСТЕМА ДВУХ КОЛОНОК
         local page = create("ScrollingFrame", {AutomaticCanvasSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), Position = UDim2.fromOffset(16, 16), ScrollBarThickness = 2, ScrollBarImageColor3 = self.Library.Theme.AccentSoft, Size = UDim2.new(1, -32, 1, -32), Visible = false, Parent = pages})
-        list(page, 10, false)
+        local pageLayout = create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim2.new(0, 10), Parent = page})
+        
+        local leftCol = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(0.5, -5, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = page})
+        local rightCol = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(0.5, -5, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = page})
+        list(leftCol, 10, false)
+        list(rightCol, 10, false)
 
-        local tab = setmetatable({Window = self, Button = button, Frame = frame, Label = label, Description = descriptionLabel, ActiveLine = activeLine, IconWrap = iconWrap, ImageLabel = imageLabel, GlyphLabel = glyphLabel, Page = page}, Tab)
+        -- Адаптивность колонок при сужении
+        page:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if page.AbsoluteSize.X < 380 then
+                pageLayout.FillDirection = Enum.FillDirection.Vertical
+                leftCol.Size = UDim2.new(1, 0, 0, 0)
+                rightCol.Size = UDim2.new(1, 0, 0, 0)
+            else
+                pageLayout.FillDirection = Enum.FillDirection.Horizontal
+                leftCol.Size = UDim2.new(0.5, -5, 0, 0)
+                rightCol.Size = UDim2.new(0.5, -5, 0, 0)
+            end
+        end)
+
+        local tab = setmetatable({Window = self, Button = button, Frame = frame, Label = label, Description = descriptionLabel, ActiveLine = activeLine, IconWrap = iconWrap, ImageLabel = imageLabel, GlyphLabel = glyphLabel, Page = page, LeftColumn = leftCol, RightColumn = rightCol}, Tab)
         table.insert(self.Tabs, tab)
         tab:SetLayout(self.TabPosition)
 
@@ -1169,12 +1200,18 @@ function NullLibrary:CreateWindow(options)
     function window:SelectTab(targetTab, instant)
         if self.CurrentTab == targetTab then return end
         self.CurrentTab = targetTab
+        local horizontalMode = self.TabPosition == "Top" or self.TabPosition == "Bottom"
+
         for _, tab in ipairs(self.Tabs) do
             local active = tab == targetTab
             tab.Page.Visible = active and true or false
             tween(tab.Frame, {BackgroundTransparency = 1}, instant and 0 or 0.2)
             tween(tab.IconWrap, {BackgroundTransparency = 1}, instant and 0 or 0.2)
-            tween(tab.ActiveLine, {BackgroundTransparency = active and 0 or 1, Size = active and UDim2.fromOffset(20, 2) or UDim2.fromOffset(10, 2)}, instant and 0 or 0.2)
+            
+            local activeSize = horizontalMode and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 20)
+            local inactiveSize = horizontalMode and UDim2.fromOffset(10, 2) or UDim2.fromOffset(2, 10)
+            
+            tween(tab.ActiveLine, {BackgroundTransparency = active and 0 or 1, Size = active and activeSize or inactiveSize}, instant and 0 or 0.2)
             tab.Label.TextColor3 = active and self.Library.Theme.Text or self.Library.Theme.Muted
             tab.GlyphLabel.TextColor3 = active and self.Library.Theme.AccentSoft or self.Library.Theme.Text
             tab.ImageLabel.ImageColor3 = active and self.Library.Theme.AccentSoft or self.Library.Theme.Text
@@ -1193,13 +1230,22 @@ function NullLibrary:CreateWindow(options)
         optionButton.MouseButton1Click:Connect(function() settingsMenu.Visible = false window:_layoutChrome(choice.Value) end)
     end
     
-    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.new(1, 0, 0, 16), Text = "Watermark", TextColor3 = self.Theme.Muted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 16, Parent = settingsMenu})
+    -- НАСТОЯЩИЙ TOGGLE В НАСТРОЙКАХ
+    create("Frame", {BackgroundTransparency=1, Size=UDim2.new(1,0,0,4), ZIndex=16, Parent=settingsMenu})
+    local wmToggleBtn = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 36), Text = "", ZIndex = 16, Parent = settingsMenu})
+    corner(wmToggleBtn, 6)
+    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -40, 1, 0), Text = "Watermark", TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = wmToggleBtn})
+    local wmTrack = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = self.Theme.AccentSoft, BackgroundTransparency = 0.2, Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(32, 16), ZIndex=17, Parent = wmToggleBtn})
+    corner(wmTrack, 999)
+    local wmKnob = create("Frame", {AnchorPoint = Vector2.new(0, 0.5), BackgroundColor3 = self.Theme.Text, Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(14, 14), ZIndex=18, Parent = wmTrack})
+    corner(wmKnob, 999)
 
-    local wmButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 32), Text = "", ZIndex = 16, Parent = settingsMenu})
-    corner(wmButton, 6)
-    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), Text = "Toggle Watermark", TextColor3 = self.Theme.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 17, Parent = wmButton})
-    wmButton.MouseButton1Click:Connect(function() 
-        window.Watermark.Visible = not window.Watermark.Visible
+    local wmState = true
+    wmToggleBtn.MouseButton1Click:Connect(function()
+        wmState = not wmState
+        tween(wmTrack, {BackgroundColor3 = wmState and self.Theme.AccentSoft or self.Theme.SurfaceAccent}, 0.2)
+        tween(wmKnob, {Position = wmState and UDim2.new(1, -16, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)}, 0.2)
+        window.Watermark.Visible = wmState
         settingsMenu.Visible = false
     end)
 
@@ -1258,9 +1304,7 @@ function NullLibrary:CreateWindow(options)
     end)
 
     root:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        if window.TabPosition == "Top" or window.TabPosition == "Bottom" then
-            window:_syncFloatingTabs()
-        end
+        if window.TabPosition == "Top" or window.TabPosition == "Bottom" then window:_syncFloatingTabs() end
     end)
 
     RunService.RenderStepped:Connect(function(dt)
@@ -1280,6 +1324,12 @@ function NullLibrary:CreateWindow(options)
     window:LoadAutoload(true)
     window:_applyRootSize()
     window:_setOpen(true, false)
+    
+    -- ПРИНУДИТЕЛЬНЫЙ АПДЕЙТ ВКЛАДОК ПОСЛЕ СПАВНА
+    task.defer(function()
+        window:_layoutChrome(window.TabPosition)
+    end)
+
     if options.WelcomeNotification ~= false then task.delay(0.08, function() window:Notify({Title = options.Title or "Null", Content = "UI launched successfully.", Icon = options.Icon, Duration = 3, Color = self.Theme.Good}) end) end
     return window
 end
