@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "3.9"
+    Version = "4.0"
 }
 
 local Players = game:GetService("Players")
@@ -105,6 +105,12 @@ local function shallowCopy(tbl)
     return clone
 end
 
+local function cloneTheme(theme)
+    local copy = {}
+    for key, value in pairs(theme or {}) do copy[key] = value end
+    return copy
+end
+
 local function clampRound(value)
     return math.floor(value + 0.5)
 end
@@ -188,6 +194,73 @@ local function configNameFromPath(path)
     if not fileName then return nil end
     if not fileName:lower():match("%.json$") then return nil end
     return fileName:gsub("%.json$", "")
+end
+
+NullLibrary.ThemePresets = {
+    Null = cloneTheme(NullLibrary.Theme),
+    Arctic = {
+        Background = Color3.fromRGB(17, 24, 38), Surface = Color3.fromRGB(17, 24, 38), SurfaceSoft = Color3.fromRGB(14, 20, 31),
+        SurfaceRaised = Color3.fromRGB(24, 34, 52), SurfaceAccent = Color3.fromRGB(33, 46, 69), Text = Color3.fromRGB(236, 244, 255),
+        Muted = Color3.fromRGB(159, 179, 205), Stroke = Color3.fromRGB(74, 95, 125), AccentSoft = Color3.fromRGB(116, 191, 255),
+        Good = Color3.fromRGB(110, 226, 176), Bad = Color3.fromRGB(255, 105, 128),
+    },
+    Ember = {
+        Background = Color3.fromRGB(30, 17, 14), Surface = Color3.fromRGB(30, 17, 14), SurfaceSoft = Color3.fromRGB(24, 13, 11),
+        SurfaceRaised = Color3.fromRGB(43, 24, 19), SurfaceAccent = Color3.fromRGB(58, 33, 26), Text = Color3.fromRGB(255, 237, 230),
+        Muted = Color3.fromRGB(203, 164, 151), Stroke = Color3.fromRGB(114, 72, 59), AccentSoft = Color3.fromRGB(255, 136, 92),
+        Good = Color3.fromRGB(118, 233, 170), Bad = Color3.fromRGB(255, 92, 116),
+    },
+    Forest = {
+        Background = Color3.fromRGB(16, 25, 19), Surface = Color3.fromRGB(16, 25, 19), SurfaceSoft = Color3.fromRGB(12, 20, 15),
+        SurfaceRaised = Color3.fromRGB(24, 36, 28), SurfaceAccent = Color3.fromRGB(32, 50, 38), Text = Color3.fromRGB(230, 244, 234),
+        Muted = Color3.fromRGB(157, 182, 165), Stroke = Color3.fromRGB(72, 99, 80), AccentSoft = Color3.fromRGB(124, 222, 153),
+        Good = Color3.fromRGB(103, 240, 167), Bad = Color3.fromRGB(255, 101, 125),
+    },
+    Sunset = {
+        Background = Color3.fromRGB(36, 18, 31), Surface = Color3.fromRGB(36, 18, 31), SurfaceSoft = Color3.fromRGB(29, 14, 24),
+        SurfaceRaised = Color3.fromRGB(50, 26, 43), SurfaceAccent = Color3.fromRGB(67, 35, 58), Text = Color3.fromRGB(252, 233, 247),
+        Muted = Color3.fromRGB(203, 164, 198), Stroke = Color3.fromRGB(118, 78, 112), AccentSoft = Color3.fromRGB(255, 122, 188),
+        Good = Color3.fromRGB(116, 232, 188), Bad = Color3.fromRGB(255, 90, 126),
+    },
+    Midnight = {
+        Background = Color3.fromRGB(9, 11, 18), Surface = Color3.fromRGB(9, 11, 18), SurfaceSoft = Color3.fromRGB(7, 9, 15),
+        SurfaceRaised = Color3.fromRGB(16, 20, 31), SurfaceAccent = Color3.fromRGB(23, 30, 45), Text = Color3.fromRGB(233, 239, 255),
+        Muted = Color3.fromRGB(145, 159, 191), Stroke = Color3.fromRGB(62, 74, 104), AccentSoft = Color3.fromRGB(123, 145, 255),
+        Good = Color3.fromRGB(114, 225, 180), Bad = Color3.fromRGB(255, 89, 117),
+    },
+    Mint = {
+        Background = Color3.fromRGB(15, 28, 26), Surface = Color3.fromRGB(15, 28, 26), SurfaceSoft = Color3.fromRGB(11, 22, 20),
+        SurfaceRaised = Color3.fromRGB(23, 40, 37), SurfaceAccent = Color3.fromRGB(30, 54, 50), Text = Color3.fromRGB(228, 249, 244),
+        Muted = Color3.fromRGB(152, 194, 183), Stroke = Color3.fromRGB(72, 109, 101), AccentSoft = Color3.fromRGB(93, 233, 197),
+        Good = Color3.fromRGB(112, 239, 187), Bad = Color3.fromRGB(255, 104, 130),
+    },
+}
+
+function NullLibrary:RegisterTheme(name, themeData)
+    if type(name) ~= "string" or name == "" or type(themeData) ~= "table" then return false end
+    self.ThemePresets[name] = cloneTheme(themeData)
+    return true
+end
+
+function NullLibrary:GetTheme(name)
+    local preset = self.ThemePresets[name or "Null"] or self.ThemePresets.Null
+    return preset and cloneTheme(preset) or nil
+end
+
+function NullLibrary:ListThemes()
+    local names = {}
+    for name in pairs(self.ThemePresets) do table.insert(names, name) end
+    table.sort(names)
+    if names[1] ~= "Null" then
+        for index, name in ipairs(names) do
+            if name == "Null" then
+                table.remove(names, index)
+                table.insert(names, 1, "Null")
+                break
+            end
+        end
+    end
+    return names
 end
 
 function NullLibrary:_storageAvailable()
@@ -918,15 +991,15 @@ function NullLibrary:CreateWindow(options)
 
     local badge = create("Frame", {BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency = 0.5, Size = UDim2.fromOffset(68, 32), Parent = controls})
     corner(badge, 6) stroke(badge, 0.6, 1)
-    create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.fromScale(1, 1), Text = options.BadgeText or "NULL", TextColor3 = self.Theme.Text, TextSize = 11, Parent = badge})
+    local badgeLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamBold, Size = UDim2.fromScale(1, 1), Text = options.BadgeText or "NULL", TextColor3 = self.Theme.Text, TextSize = 11, Parent = badge})
 
     local settingsButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "", Parent = controls})
     corner(settingsButton, 6) stroke(settingsButton, 0.6, 1)
-    create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:settings-2"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, Parent = settingsButton})
+    local settingsIcon = create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:settings-2"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, Parent = settingsButton})
 
     local hideButton = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.fromOffset(32, 32), Text = "", Parent = controls})
     corner(hideButton, 6) stroke(hideButton, 0.6, 1)
-    create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:minus"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, Parent = hideButton})
+    local hideIcon = create("ImageLabel", {BackgroundTransparency = 1, Image = normalizeImage("lucide:minus"), ImageColor3 = self.Theme.Muted, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), ScaleType = Enum.ScaleType.Fit, Parent = hideButton})
 
     local sidebar = create("Frame", {BackgroundColor3 = self.Theme.Background, BackgroundTransparency = 0.2, Position = UDim2.fromOffset(18, 84), Size = UDim2.new(0, 190, 1, -102), Parent = clip})
     corner(sidebar, 8) stroke(sidebar, 1, 1) padding(sidebar, 12, 12)
@@ -1039,8 +1112,10 @@ function NullLibrary:CreateWindow(options)
         TabPosition = options.TabPosition or "Left", Tabs = {}, CurrentTab = nil,
         MinSize = options.MinSize or Vector2.new(420, 340), MaxSize = options.MaxSize or Vector2.new(1200, 900), CurrentSize = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(780, 520),
         UserResized = false, Open = true, StoredPosition = options.Position or UDim2.fromScale(0.5, 0.5), ToggleKey = options.ToggleKey or Enum.KeyCode.RightControl, Elements = {}, Flags = {}, PendingConfig = nil, ConfigFolder = options.ConfigFolder or "NullUI", ConfigName = options.ConfigName or name,
-        MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
-        Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon, WatermarkGui = watermarkGui, WatermarkEnabled = true,
+        ThemeName = options.ThemeName or "Null",
+        MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, HideButton = hideButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
+        Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon, WatermarkBg = watermarkBg, WatermarkGui = watermarkGui, WatermarkEnabled = true,
+        Badge = badge, BadgeLabel = badgeLabel, SettingsIcon = settingsIcon, HideIcon = hideIcon,
         _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {},
     }, Window)
 
@@ -1081,6 +1156,7 @@ function NullLibrary:CreateWindow(options)
         local data = {}
         for flag, controller in pairs(self.Elements) do if controller and controller.Get then data[flag] = controller:Get() end end
         data["_UISize"] = {X = self.CurrentSize.X, Y = self.CurrentSize.Y}
+        data["_Theme"] = self.ThemeName or "Null"
         return data
     end
 
@@ -1106,6 +1182,8 @@ function NullLibrary:CreateWindow(options)
             if flag == "_UISize" and type(value) == "table" then
                 self.CurrentSize = Vector2.new(tonumber(value.X) or self.CurrentSize.X, tonumber(value.Y) or self.CurrentSize.Y)
                 self:_applyRootSize()
+            elseif flag == "_Theme" and type(value) == "string" and value ~= "" then
+                self:SetThemeByName(value, true)
             else
                 local controller = self.Elements[flag]
                 if controller and controller.Set then controller:Set(value, true) end
@@ -1272,6 +1350,57 @@ function NullLibrary:CreateWindow(options)
     end
     function window:SetSubtitle(text) self.SubtitleLabel.Text = text or self.SubtitleLabel.Text end
     function window:SetTabPosition(position) self:_layoutChrome(position) end
+    function window:_applyThemeToWindow()
+        local t = self.Library.Theme
+        if not t then return end
+        self.Root.BackgroundColor3 = t.Background
+        self.Sidebar.BackgroundColor3 = t.Background
+        self.Content.BackgroundColor3 = t.Background
+        self.FloatingTabsBar.BackgroundColor3 = t.Background
+        self.SettingsMenu.BackgroundColor3 = t.SurfaceSoft
+        self.MobileToggle.BackgroundColor3 = t.SurfaceSoft
+        self.TitleLabel.TextColor3 = t.Text
+        self.SubtitleLabel.TextColor3 = t.Muted
+        self.SidebarHeader.TextColor3 = t.Muted
+        self.Badge.BackgroundColor3 = t.SurfaceRaised
+        self.BadgeLabel.TextColor3 = t.Text
+        self.SettingsButton.BackgroundColor3 = t.SurfaceRaised
+        self.HideButton.BackgroundColor3 = t.SurfaceRaised
+        self.SettingsIcon.ImageColor3 = t.Muted
+        self.HideIcon.ImageColor3 = t.Muted
+        self.WatermarkBg.BackgroundColor3 = t.Background
+        self.WatermarkText.TextColor3 = t.Text
+        for _, tab in ipairs(self.Tabs) do
+            tab.Frame.BackgroundColor3 = (self.TabPosition == "Top" or self.TabPosition == "Bottom") and t.SurfaceRaised or t.Background
+            tab.IconWrap.BackgroundColor3 = (self.TabPosition == "Top" or self.TabPosition == "Bottom") and t.SurfaceAccent or t.Background
+            tab.Label.TextColor3 = tab == self.CurrentTab and t.Text or t.Muted
+            tab.Description.TextColor3 = t.Muted
+            tab.GlyphLabel.TextColor3 = tab == self.CurrentTab and t.AccentSoft or t.Text
+            tab.ImageLabel.ImageColor3 = tab == self.CurrentTab and t.AccentSoft or t.Text
+            tab.ActiveLine.BackgroundColor3 = t.AccentSoft
+        end
+        if self.CurrentTab then self:SelectTab(self.CurrentTab, true) end
+    end
+    function window:SetTheme(themeData, silent, themeName)
+        if type(themeData) ~= "table" then return false end
+        for key, value in pairs(themeData) do
+            if typeof(value) == "Color3" then
+                self.Library.Theme[key] = value
+            end
+        end
+        if type(themeName) == "string" and themeName ~= "" then
+            self.ThemeName = themeName
+        end
+        self:_applyThemeToWindow()
+        if not silent then self:Notify({Title = "Theme", Content = "Theme applied.", Color = self.Library.Theme.Good}) end
+        return true
+    end
+    function window:SetThemeByName(themeName, silent)
+        themeName = type(themeName) == "string" and themeName or "Null"
+        local theme = self.Library:GetTheme(themeName)
+        if not theme then return false end
+        return self:SetTheme(theme, silent, themeName)
+    end
     function window:Destroy()
         if self.ScreenGui then self.ScreenGui:Destroy() end
         if self.WatermarkGui then self.WatermarkGui:Destroy() end
@@ -1579,6 +1708,7 @@ function NullLibrary:CreateWindow(options)
         if input.KeyCode == window.ToggleKey then window:Toggle() return end
     end)
 
+    window:SetThemeByName(window.ThemeName, true)
     window:LoadAutoload(true)
     window:_applyRootSize()
     window:_setOpen(true, false)
