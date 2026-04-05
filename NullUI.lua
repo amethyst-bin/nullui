@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "3.8"
+    Version = "3.9"
 }
 
 local Players = game:GetService("Players")
@@ -120,6 +120,7 @@ local Storage = {
     makefolder = makefolder,
     isfolder = isfolder,
     isfile = isfile,
+    delfile = delfile,
     listfiles = listfiles,
     getcustomasset = getcustomasset or getsynasset
 }
@@ -640,7 +641,13 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             arrow.Text = "v"
             local pHeight = math.min(200, (#vals * 34) + 16)
             local popup = self.Window:_createPopup(200, pHeight, button)
-            local dConn dConn = popup.AncestryChanged:Connect(function() if not popup:IsDescendantOf(game) then arrow.Text = ">" dConn:Disconnect() end end)
+            local dConn
+            dConn = popup.AncestryChanged:Connect(function()
+                if not popup:IsDescendantOf(game) then
+                    arrow.Text = ">"
+                    dConn:Disconnect()
+                end
+            end)
             local scroller = create("ScrollingFrame", {Active = true, AutomaticCanvasSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), Position = UDim2.fromOffset(8, 8), ScrollBarImageColor3 = NullLibrary.Theme.AccentSoft, ScrollBarThickness = 4, Size = UDim2.new(1, -16, 1, -16), ZIndex = 51, Parent = popup})
             list(scroller, 4, false)
 
@@ -655,6 +662,170 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         button.MouseButton1Click:Connect(function() if self.Window._activePopup and self.Window._activePopupAnchor == button then self.Window:_closePopup() else self.Window:_closePopup(true) openPopup() end end)
         register(flag, controller, sel)
         controller:SetValues(vals, true)
+        return controller
+    end
+
+    function section:AddColorPicker(options)
+        options = options or {}
+        local flag = options.Flag or options.Text or "Color"
+        local color = typeof(options.Default) == "Color3" and options.Default or (typeof(options.DefaultColor) == "Color3" and options.DefaultColor or Color3.fromRGB(255, 0, 0))
+        local alpha = math.clamp(tonumber(options.DefaultAlpha) or 1, 0, 1)
+        local hue, sat, val = Color3.toHSV(color)
+
+        local function encode(c, a)
+            return {R = c.R, G = c.G, B = c.B, A = a}
+        end
+
+        local button = NullLibrary:_createCardButton(holder, 42)
+        create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -68, 1, 0), Text = options.Text or "Color", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = button})
+
+        local previewWrap = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.2, Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(36, 20), Parent = button})
+        corner(previewWrap, 6) stroke(previewWrap, 0.4, 1)
+        local previewBg = create("Frame", {BackgroundColor3 = Color3.fromRGB(230, 230, 230), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = previewWrap})
+        corner(previewBg, 6)
+        create("UIGradient", {Rotation = 0, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 200, 200)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(235, 235, 235)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))}), Parent = previewBg})
+        local previewFill = create("Frame", {BackgroundColor3 = color, BackgroundTransparency = 1 - alpha, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = previewWrap})
+        corner(previewFill, 6)
+
+        local function updatePreview()
+            previewFill.BackgroundColor3 = color
+            previewFill.BackgroundTransparency = 1 - alpha
+        end
+
+        local controller = {Window = self.Window}
+        function controller:Set(s, v, sk)
+            local newValue, skip = normalizeSetArgs(s, v, sk)
+            if typeof(newValue) == "Color3" then
+                color = newValue
+                if type(v) == "number" then alpha = math.clamp(v, 0, 1) end
+            elseif type(newValue) == "table" then
+                local r, g, b, a = tonumber(newValue.R), tonumber(newValue.G), tonumber(newValue.B), tonumber(newValue.A)
+                if r and g and b then color = Color3.new(math.clamp(r, 0, 1), math.clamp(g, 0, 1), math.clamp(b, 0, 1)) end
+                if a then alpha = math.clamp(a, 0, 1) end
+            end
+            hue, sat, val = Color3.toHSV(color)
+            updatePreview()
+            controller.Window.Flags[flag] = encode(color, alpha)
+            if not skip and options.Callback then task.spawn(options.Callback, color, alpha) end
+        end
+        function controller:Get() return encode(color, alpha) end
+        function controller:GetColor() return color, alpha end
+
+        local function openPopup()
+            local popup = self.Window:_createPopup(318, 262, button, Vector2.new(12, -110))
+            local content = create("Frame", {BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 10), Size = UDim2.new(1, -20, 1, -20), Parent = popup})
+            create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 18), Text = options.PopupTitle or "Color Picker", TextColor3 = NullLibrary.Theme.Text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = content})
+
+            local sv = create("Frame", {BackgroundColor3 = Color3.fromHSV(hue, 1, 1), BorderSizePixel = 0, Position = UDim2.fromOffset(0, 24), Size = UDim2.fromOffset(190, 190), Parent = content})
+            corner(sv, 8) stroke(sv, 0.5, 1)
+            local svWhite = create("Frame", {BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = sv})
+            corner(svWhite, 8)
+            create("UIGradient", {Rotation = 0, Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = svWhite})
+            local svBlack = create("Frame", {BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = sv})
+            corner(svBlack, 8)
+            create("UIGradient", {Rotation = 90, Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)}), Parent = svBlack})
+            local svDot = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Size = UDim2.fromOffset(12, 12), Parent = sv})
+            stroke(svDot, 0, 2, Color3.new(1, 1, 1))
+
+            local hueBar = create("Frame", {BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Position = UDim2.fromOffset(202, 24), Size = UDim2.fromOffset(20, 190), Parent = content})
+            corner(hueBar, 8) stroke(hueBar, 0.5, 1)
+            create("UIGradient", {
+                Rotation = 90,
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+                    ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
+                    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
+                    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+                    ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
+                    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
+                    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
+                }),
+                Parent = hueBar
+            })
+            local hueDot = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromOffset(28, 4), Parent = hueBar})
+            corner(hueDot, 999)
+
+            local alphaBar = create("Frame", {BackgroundColor3 = color, BorderSizePixel = 0, Position = UDim2.fromOffset(0, 226), Size = UDim2.fromOffset(222, 16), Parent = content})
+            corner(alphaBar, 6) stroke(alphaBar, 0.5, 1)
+            local alphaBack = create("Frame", {BackgroundColor3 = Color3.fromRGB(230, 230, 230), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = alphaBar})
+            corner(alphaBack, 6)
+            create("UIGradient", {Rotation = 0, Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 200, 200)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(235, 235, 235)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))}), Parent = alphaBack})
+            local alphaColor = create("Frame", {BackgroundColor3 = color, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = alphaBar})
+            corner(alphaColor, 6)
+            create("UIGradient", {Rotation = 0, Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)}), Parent = alphaColor})
+            local alphaDot = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Size = UDim2.fromOffset(8, 20), Parent = alphaBar})
+            corner(alphaDot, 999)
+
+            local bigPreview = create("Frame", {BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.2, Position = UDim2.fromOffset(234, 24), Size = UDim2.fromOffset(64, 64), Parent = content})
+            corner(bigPreview, 8) stroke(bigPreview, 0.5, 1)
+            local bigBg = create("Frame", {BackgroundColor3 = Color3.fromRGB(230, 230, 230), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = bigPreview})
+            corner(bigBg, 8)
+            local bigFill = create("Frame", {BackgroundColor3 = color, BackgroundTransparency = 1 - alpha, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), Parent = bigPreview})
+            corner(bigFill, 8)
+
+            local info = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(234, 94), Size = UDim2.fromOffset(64, 72), Text = "", TextColor3 = NullLibrary.Theme.Text, TextSize = 11, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Parent = content})
+
+            local draggingSV, draggingHue, draggingAlpha = false, false, false
+            local function sync(skipCallback)
+                color = Color3.fromHSV(hue, sat, val)
+                local r, g, b = math.floor(color.R * 255 + 0.5), math.floor(color.G * 255 + 0.5), math.floor(color.B * 255 + 0.5)
+                sv.BackgroundColor3 = Color3.fromHSV(hue, 1, 1)
+                alphaBar.BackgroundColor3 = color
+                alphaColor.BackgroundColor3 = color
+                bigFill.BackgroundColor3 = color
+                bigFill.BackgroundTransparency = 1 - alpha
+                updatePreview()
+
+                info.Text = string.format("RGB\n%d %d %d\n#%02X%02X%02X\nA %d%%", r, g, b, r, g, b, math.floor(alpha * 100 + 0.5))
+                svDot.Position = UDim2.new(sat, 0, 1 - val, 0)
+                hueDot.Position = UDim2.new(0.5, 0, 1 - hue, 0)
+                alphaDot.Position = UDim2.new(alpha, 0, 0.5, 0)
+                controller.Window.Flags[flag] = encode(color, alpha)
+                if not skipCallback and options.Callback then task.spawn(options.Callback, color, alpha) end
+            end
+
+            local function setSVFromPos(position)
+                local p, s = sv.AbsolutePosition, sv.AbsoluteSize
+                sat = math.clamp((position.X - p.X) / math.max(s.X, 1), 0, 1)
+                val = 1 - math.clamp((position.Y - p.Y) / math.max(s.Y, 1), 0, 1)
+                sync()
+            end
+            local function setHueFromPos(position)
+                local p, s = hueBar.AbsolutePosition, hueBar.AbsoluteSize
+                hue = 1 - math.clamp((position.Y - p.Y) / math.max(s.Y, 1), 0, 1)
+                sync()
+            end
+            local function setAlphaFromPos(position)
+                local p, s = alphaBar.AbsolutePosition, alphaBar.AbsoluteSize
+                alpha = math.clamp((position.X - p.X) / math.max(s.X, 1), 0, 1)
+                sync()
+            end
+
+            sv.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingSV = true setSVFromPos(input.Position) end end)
+            hueBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingHue = true setHueFromPos(input.Position) end end)
+            alphaBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingAlpha = true setAlphaFromPos(input.Position) end end)
+
+            table.insert(self.Window._popupConnections, UIS.InputChanged:Connect(function(input)
+                if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                if draggingSV then setSVFromPos(input.Position) end
+                if draggingHue then setHueFromPos(input.Position) end
+                if draggingAlpha then setAlphaFromPos(input.Position) end
+            end))
+            table.insert(self.Window._popupConnections, UIS.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingSV, draggingHue, draggingAlpha = false, false, false
+                end
+            end))
+
+            sync(true)
+        end
+
+        button.MouseButton1Click:Connect(function()
+            if self.Window._activePopup and self.Window._activePopupAnchor == button then self.Window:_closePopup() else self.Window:_closePopup(true) openPopup() end
+        end)
+
+        register(flag, controller, encode(color, alpha))
+        controller:Set(encode(color, alpha), true, true)
         return controller
     end
 
@@ -943,6 +1114,35 @@ function NullLibrary:CreateWindow(options)
         
         self.ConfigName = configName
         if not silent then self.Library:Notify({Title = "Loaded", Content = "Config loaded.", Color = self.Library.Theme.Good}) end
+        return true
+    end
+
+    function window:DeleteConfig(configName, silent)
+        configName = configName or self.ConfigName
+        if type(configName) ~= "string" or configName == "" then return false end
+        if not (Storage.isfile and Storage.delfile) then
+            if not silent then self.Library:Notify({Title = "Configs", Content = "Delete is not supported.", Color = self.Library.Theme.Bad}) end
+            return false
+        end
+        local path = self:_configFilePath(configName)
+        if not Storage.isfile(path) then
+            if not silent then self.Library:Notify({Title = "Configs", Content = "Config not found.", Color = self.Library.Theme.Bad}) end
+            return false
+        end
+        local ok = pcall(Storage.delfile, path)
+        if not ok then
+            if not silent then self.Library:Notify({Title = "Configs", Content = "Failed to delete config.", Color = self.Library.Theme.Bad}) end
+            return false
+        end
+        local autoload = self:GetAutoloadState()
+        if autoload.Enabled and autoload.Config == configName then
+            self:DisableAutoload(true)
+        end
+        if self.ConfigName == configName then
+            local remaining = self:RefreshConfigs()
+            self.ConfigName = remaining[1] or self.ConfigName
+        end
+        if not silent then self.Library:Notify({Title = "Configs", Content = string.format("Deleted: %s", configName), Color = self.Library.Theme.Good}) end
         return true
     end
 
