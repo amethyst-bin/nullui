@@ -1,9 +1,9 @@
 local NullLibrary = {
     Theme = {
         Background = Color3.fromRGB(15, 15, 20),
-        Surface = Color3.fromRGB(15, 15, 20), -- Сделали одинаковым
-        SurfaceSoft = Color3.fromRGB(12, 12, 16), -- Чуть-чуть темнее для элементов
-        SurfaceRaised = Color3.fromRGB(18, 18, 24), -- Чуть светлее для кнопок
+        Surface = Color3.fromRGB(15, 15, 20),
+        SurfaceSoft = Color3.fromRGB(12, 12, 16),
+        SurfaceRaised = Color3.fromRGB(18, 18, 24),
         SurfaceAccent = Color3.fromRGB(24, 24, 32),
         Text = Color3.fromRGB(255, 255, 255),
         Muted = Color3.fromRGB(160, 168, 190),
@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "3.4 Glass Fixed"
+    Version = "3.5 Perfect"
 }
 
 local Players = game:GetService("Players")
@@ -432,8 +432,22 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         corner(frame, 6) stroke(frame, 0.6, 1) padding(frame, 8, 8)
         
         local imgSource = normalizeImage(options.Image or options.Url or options.ID)
-        local image = create("ImageLabel", {BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.5, Image = imgSource, Size = UDim2.new(1, 0, 0, options.Height or 140), ScaleType = options.ScaleType or Enum.ScaleType.Fit, Parent = frame})
+        local baseScale = options.ScaleType or Enum.ScaleType.Crop
+        local image = create("ImageLabel", {BackgroundColor3 = NullLibrary.Theme.SurfaceAccent, BackgroundTransparency = 0.5, Image = imgSource, Size = UDim2.new(1, 0, 0, options.Height or 140), ScaleType = baseScale, Parent = frame})
         corner(image, options.CornerRadius or 6)
+
+        -- Динамическая смена Crop/Fit в зависимости от ширины UI
+        image:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if image.AbsoluteSize.X < 360 then
+                image.ScaleType = Enum.ScaleType.Fit
+            else
+                image.ScaleType = baseScale
+            end
+        end)
+        task.spawn(function()
+            RunService.RenderStepped:Wait()
+            if image.AbsoluteSize.X < 360 then image.ScaleType = Enum.ScaleType.Fit end
+        end)
 
         if imgSource == "" and type(options.Image or options.Url) == "string" and (options.Image or options.Url):match("^http") then
             task.spawn(function()
@@ -762,28 +776,38 @@ function NullLibrary:CreateWindow(options)
     local mobileToggle = create("ImageButton", {AnchorPoint = Vector2.new(0, 1), AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceSoft, Image = normalizeImage(options.MobileToggleIcon or options.Icon), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.fromOffset(56, 56), Visible = false, Parent = screenGui})
     corner(mobileToggle, 8) stroke(mobileToggle, 0.4, 1)
 
-    -- WATERMARK SYSTEM --
+    -- NEW WATERMARK SYSTEM --
     local watermark = create("Frame", {
-        AutomaticSize = Enum.AutomaticSize.X,
         BackgroundColor3 = self.Theme.Background,
         BackgroundTransparency = 0.2,
-        Position = UDim2.new(0, 16, 0, 16),
-        AnchorPoint = Vector2.new(0, 0),
-        Size = UDim2.fromOffset(0, 30),
+        Position = UDim2.new(0, 16, 1, -16), -- В нижнем левом углу
+        AnchorPoint = Vector2.new(0, 1),
+        Size = UDim2.new(0, 220, 0, 38), -- Базовый размер, чтобы выглядела солидно
+        AutomaticSize = Enum.AutomaticSize.X, -- Будет расширяться при длинном тексте
         Visible = true,
+        ZIndex = 100, -- Поверх всех остальных элементов экрана
         Parent = screenGui
     })
     corner(watermark, 6) stroke(watermark, 0.4, 1, self.Theme.Text)
-    padding(watermark, 14, 0)
-    list(watermark, 0, true).VerticalAlignment = Enum.VerticalAlignment.Center
+    padding(watermark, 16, 0)
+    local wmLayout = list(watermark, 8, true)
+    wmLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     
+    local wmIcon = create("ImageLabel", {
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://7733779610", -- Иконка для стиля
+        Size = UDim2.fromOffset(16, 16),
+        ImageColor3 = self.Theme.AccentSoft,
+        Parent = watermark
+    })
+
     local watermarkTextLabel = autosizeText(create("TextLabel", {
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamSemibold,
         Size = UDim2.new(0, 0, 1, 0),
         Text = string.format("%s | %s", options.Title or "Null", options.Subtitle or "Watermark"),
         TextColor3 = self.Theme.Text,
-        TextSize = 12,
+        TextSize = 13,
         Parent = watermark
     }))
 
@@ -833,7 +857,6 @@ function NullLibrary:CreateWindow(options)
     function window:_collectFlags()
         local data = {}
         for flag, controller in pairs(self.Elements) do if controller and controller.Get then data[flag] = controller:Get() end end
-        -- Сохраняем размер окна
         data["_UISize"] = {X = self.CurrentSize.X, Y = self.CurrentSize.Y}
         return data
     end
@@ -1051,15 +1074,17 @@ function NullLibrary:CreateWindow(options)
 
     function window:_syncFloatingTabs()
         if not self.FloatingTabs.Visible then return end
-        task.spawn(function()
-            RunService.RenderStepped:Wait()
-            local layoutObject = self.TabHolder and self.TabHolder:FindFirstChildOfClass("UIListLayout")
-            local width = layoutObject and layoutObject.AbsoluteContentSize.X or 0
-            local barWidth = math.max(200, width + 12)
-            self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 48)
-            self.FloatingTabs.Position = self.TabPosition == "Top" and UDim2.new(0.5, 0, 0, -12) or UDim2.new(0.5, 0, 1, 12)
-            self.FloatingTabs.AnchorPoint = self.TabPosition == "Top" and Vector2.new(0.5, 1) or Vector2.new(0.5, 0)
-        end)
+        local count = #self.Tabs
+        if count == 0 then return end
+        
+        -- Полностью математический точный расчёт ширины, багов быть не может.
+        -- Ширина одной вкладки = 130px. Паддинг между ними = 6px. Общий паддинг контейнера = 12px (6 слева и 6 справа).
+        local totalWidth = (count * 130) + ((count - 1) * 6) + 12
+        local barWidth = math.max(200, totalWidth)
+        
+        self.FloatingTabs.Size = UDim2.fromOffset(barWidth, 48)
+        self.FloatingTabs.Position = self.TabPosition == "Top" and UDim2.new(0.5, 0, 0, -12) or UDim2.new(0.5, 0, 1, 12)
+        self.FloatingTabs.AnchorPoint = self.TabPosition == "Top" and Vector2.new(0.5, 1) or Vector2.new(0.5, 0)
     end
 
     function window:_layoutChrome(mode)
