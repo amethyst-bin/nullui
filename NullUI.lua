@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "3.6 Dual Columns"
+    Version = "3.7 Fixed & Blurred"
 }
 
 local Players = game:GetService("Players")
@@ -387,7 +387,6 @@ function Tab:SetLayout(mode)
         self.Label.TextSize = 12
         self.Description.Visible = false
         
-        -- Полоска снизу
         self.ActiveLine.Position = UDim2.new(0.5, 0, 1, -2)
         self.ActiveLine.AnchorPoint = Vector2.new(0.5, 0)
         self.ActiveLine.Size = active and UDim2.fromOffset(20, 2) or UDim2.fromOffset(10, 2)
@@ -402,7 +401,6 @@ function Tab:SetLayout(mode)
         self.Label.TextSize = 13
         self.Description.Visible = self.Description.Text ~= ""
         
-        -- Полоска слева
         self.ActiveLine.Position = UDim2.new(0, 0, 0.5, 0)
         self.ActiveLine.AnchorPoint = Vector2.new(0, 0.5)
         self.ActiveLine.Size = active and UDim2.fromOffset(2, 20) or UDim2.fromOffset(2, 10)
@@ -782,11 +780,11 @@ function NullLibrary:CreateWindow(options)
     local mobileToggle = create("ImageButton", {AnchorPoint = Vector2.new(0, 1), AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceSoft, Image = normalizeImage(options.MobileToggleIcon or options.Icon), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.fromOffset(56, 56), Visible = false, Parent = screenGui})
     corner(mobileToggle, 8) stroke(mobileToggle, 0.4, 1)
 
-    -- WATERMARK SYSTEM (INDEPENDENT) --
+    -- NEW WATERMARK SYSTEM (WITH BLUR SHADOW)
     local wmIconSource = normalizeImage(options.WatermarkIcon or options.Icon or "rbxassetid://7733779610")
-    local watermark = create("Frame", {
-        BackgroundColor3 = self.Theme.Background,
-        BackgroundTransparency = 0.2,
+    
+    local watermarkContainer = create("Frame", {
+        BackgroundTransparency = 1,
         Position = UDim2.new(0, 16, 1, -16), 
         AnchorPoint = Vector2.new(0, 1),
         Size = UDim2.new(0, 0, 0, 36),
@@ -795,9 +793,39 @@ function NullLibrary:CreateWindow(options)
         ZIndex = 100, 
         Parent = screenGui
     })
-    corner(watermark, 6) stroke(watermark, 0.4, 1, self.Theme.Text)
-    padding(watermark, 14, 0)
-    local wmLayout = list(watermark, 8, true)
+
+    local watermarkBg = create("Frame", {
+        BackgroundColor3 = self.Theme.Background,
+        BackgroundTransparency = 0.2,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = 100,
+        Parent = watermarkContainer
+    })
+    corner(watermarkBg, 6) stroke(watermarkBg, 0.4, 1, self.Theme.Text)
+
+    local wmShadow = create("ImageLabel", {
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://6015897843",
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ImageTransparency = 0.35,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.new(1, 30, 1, 30),
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        ZIndex = 99,
+        Parent = watermarkContainer
+    })
+
+    local wmContent = create("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        ZIndex = 101,
+        Parent = watermarkContainer
+    })
+    padding(wmContent, 14, 0)
+    local wmLayout = list(wmContent, 8, true)
     wmLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     
     local wmIcon = create("ImageLabel", {
@@ -806,7 +834,7 @@ function NullLibrary:CreateWindow(options)
         Size = UDim2.fromOffset(20, 20),
         Visible = wmIconSource ~= "",
         ScaleType = Enum.ScaleType.Fit,
-        Parent = watermark
+        Parent = wmContent
     })
 
     local watermarkTextLabel = create("TextLabel", {
@@ -818,7 +846,7 @@ function NullLibrary:CreateWindow(options)
         Text = string.format("%s | %s", options.Title or "Null", options.Subtitle or "Watermark"),
         TextColor3 = self.Theme.Text,
         TextSize = 13,
-        Parent = watermark
+        Parent = wmContent
     })
 
     local window = setmetatable({
@@ -827,7 +855,7 @@ function NullLibrary:CreateWindow(options)
         MinSize = options.MinSize or Vector2.new(420, 340), MaxSize = options.MaxSize or Vector2.new(1200, 900), CurrentSize = options.Size and Vector2.new(options.Size.X.Offset, options.Size.Y.Offset) or Vector2.new(780, 520),
         UserResized = false, Open = true, StoredPosition = options.Position or UDim2.fromScale(0.5, 0.5), ToggleKey = options.ToggleKey or Enum.KeyCode.RightControl, Elements = {}, Flags = {}, PendingConfig = nil, ConfigFolder = options.ConfigFolder or "NullUI", ConfigName = options.ConfigName or name,
         MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
-        Watermark = watermark, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon,
+        Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon,
         _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {},
     }, Window)
 
@@ -1166,9 +1194,9 @@ function NullLibrary:CreateWindow(options)
         local label = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(48, 8), Size = UDim2.new(1, -56, 0, 18), Text = tabOptions.Name or "Tab", TextColor3 = self.Library.Theme.Muted, TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame})
         local descriptionLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(48, 26), Size = UDim2.new(1, -56, 0, 14), Text = tabOptions.Description or "", TextColor3 = self.Library.Theme.Muted, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Visible = tabOptions.Description ~= nil and tabOptions.Description ~= "", Parent = frame})
         
-        -- СИСТЕМА ДВУХ КОЛОНОК
+        -- СИСТЕМА ДВУХ КОЛОНОК (ИСПРАВЛЕННЫЙ PADDING)
         local page = create("ScrollingFrame", {AutomaticCanvasSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), Position = UDim2.fromOffset(16, 16), ScrollBarThickness = 2, ScrollBarImageColor3 = self.Library.Theme.AccentSoft, Size = UDim2.new(1, -32, 1, -32), Visible = false, Parent = pages})
-        local pageLayout = create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim2.new(0, 10), Parent = page})
+        local pageLayout = create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), Parent = page})
         
         local leftCol = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(0.5, -5, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = page})
         local rightCol = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(0.5, -5, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Parent = page})
@@ -1325,7 +1353,6 @@ function NullLibrary:CreateWindow(options)
     window:_applyRootSize()
     window:_setOpen(true, false)
     
-    -- ПРИНУДИТЕЛЬНЫЙ АПДЕЙТ ВКЛАДОК ПОСЛЕ СПАВНА
     task.defer(function()
         window:_layoutChrome(window.TabPosition)
     end)
