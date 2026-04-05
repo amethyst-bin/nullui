@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.4"
+    Version = "4.5"
 }
 
 local Players = game:GetService("Players")
@@ -852,6 +852,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end)
 
         local controller = {Window = self.Window}
+        
         local function parseColorValue(value, fallbackAlpha)
             local parsedColor = nil
             local parsedAlpha = tonumber(fallbackAlpha)
@@ -887,6 +888,7 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
             parsedAlpha = math.clamp(parsedAlpha, 0, 1)
             return parsedColor, parsedAlpha
         end
+        
         function controller:Set(s, v, sk)
             local newValue, skip = normalizeSetArgs(s, v, sk)
             local parsedColor, parsedAlpha = parseColorValue(newValue, v)
@@ -899,15 +901,6 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         end
         function controller:Get() return encode(color, alpha) end
         function controller:GetColor() return color, alpha end
-        function controller:Serialize()
-            return {"__NULLUI_COLOR_RGBA__", color.R, color.G, color.B, alpha}
-        end
-        function controller:Deserialize(savedValue, skip)
-            local parsedColor, parsedAlpha = parseColorValue(savedValue, alpha)
-            if parsedColor then
-                controller:Set({R = parsedColor.R, G = parsedColor.G, B = parsedColor.B, A = parsedAlpha}, skip == true)
-            end
-        end
 
         local function openPopup()
             local popup = self.Window:_createPopup(318, 262, button, Vector2.new(12, -110))
@@ -1167,7 +1160,6 @@ function NullLibrary:CreateWindow(options)
     local mobileToggle = create("ImageButton", {AnchorPoint = Vector2.new(0, 1), AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceSoft, Image = normalizeImage(options.MobileToggleIcon or options.Icon), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.fromOffset(56, 56), Visible = false, Parent = screenGui})
     corner(mobileToggle, 8) stroke(mobileToggle, 0.4, 1)
 
-    -- NEW WATERMARK SYSTEM (WITH BLUR SHADOW)
     local wmIconSource = normalizeImage(options.WatermarkIcon or options.Icon or "rbxassetid://7733779610")
     
     local watermarkContainer = create("Frame", {
@@ -1697,7 +1689,6 @@ function NullLibrary:CreateWindow(options)
         local label = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamSemibold, Position = UDim2.fromOffset(48, 8), Size = UDim2.new(1, -56, 0, 18), Text = tabOptions.Name or "Tab", TextColor3 = self.Library.Theme.Muted, TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Parent = frame})
         local descriptionLabel = create("TextLabel", {BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Position = UDim2.fromOffset(48, 26), Size = UDim2.new(1, -56, 0, 14), Text = tabOptions.Description or "", TextColor3 = self.Library.Theme.Muted, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left, Visible = tabOptions.Description ~= nil and tabOptions.Description ~= "", Parent = frame})
         
-        -- СИСТЕМА ДВУХ КОЛОНОК (ИСПРАВЛЕННЫЙ PADDING)
         local page = create("ScrollingFrame", {AutomaticCanvasSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), Position = UDim2.fromOffset(16, 16), ScrollBarThickness = 2, ScrollBarImageColor3 = self.Library.Theme.AccentSoft, Size = UDim2.new(1, -32, 1, -32), Visible = false, Parent = pages})
         local pageLayout = create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), Parent = page})
         
@@ -1706,7 +1697,6 @@ function NullLibrary:CreateWindow(options)
         list(leftCol, 10, false)
         list(rightCol, 10, false)
 
-        -- Адаптивность колонок при сужении
         page:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             if page.AbsoluteSize.X < 380 then
                 pageLayout.FillDirection = Enum.FillDirection.Vertical
@@ -1771,7 +1761,6 @@ function NullLibrary:CreateWindow(options)
         optionButton.MouseButton1Click:Connect(function() settingsMenu.Visible = false window:_layoutChrome(choice.Value) end)
     end
     
-    -- НАСТОЯЩИЙ TOGGLE В НАСТРОЙКАХ
     create("Frame", {BackgroundTransparency=1, Size=UDim2.new(1,0,0,4), ZIndex=16, Parent=settingsMenu})
     local wmToggleBtn = create("TextButton", {AutoButtonColor = false, BackgroundColor3 = self.Theme.SurfaceRaised, BackgroundTransparency=0.5, Size = UDim2.new(1, 0, 0, 36), Text = "", ZIndex = 16, Parent = settingsMenu})
     corner(wmToggleBtn, 6)
