@@ -12,7 +12,7 @@ local NullLibrary = {
         Good = Color3.fromRGB(80, 255, 160),
         Bad = Color3.fromRGB(255, 80, 100),
     },
-    Version = "4.6"
+    Version = "4.7"
 }
 
 local Players = game:GetService("Players")
@@ -120,6 +120,16 @@ local function normalizeSetArgs(selfOrValue, maybeValue, maybeSkip)
         return maybeValue, maybeSkip
     end
     return selfOrValue, maybeValue
+end
+
+local function keyFromValue(value)
+    if typeof(value) == "EnumItem" and value.EnumType == Enum.KeyCode then
+        return value
+    end
+    if type(value) == "string" and value ~= "" and Enum.KeyCode[value] then
+        return Enum.KeyCode[value]
+    end
+    return nil
 end
 
 local Storage = {
@@ -819,6 +829,153 @@ function Tab:CreateSection(sectionOptions, maybeDescription)
         return controller
     end
 
+    function section:AddKeybind(options)
+        options = options or {}
+        local flag = options.Flag or options.Text or "Keybind"
+        local bindKey = keyFromValue(options.DefaultKey or options.Key) or Enum.KeyCode.Unknown
+        local mode = (options.Mode == "Hold" and "Hold") or "Toggle"
+        local state = options.DefaultState == true
+        local waitingInput = false
+
+        local frame = create("Frame", {BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 42), Parent = holder})
+        local button, outline = NullLibrary:_createCardButton(frame, 42)
+        local titleLabel = create("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamSemibold,
+            Position = UDim2.fromOffset(14, 0),
+            Size = UDim2.new(1, -126, 1, 0),
+            Text = options.Text or "Keybind",
+            TextColor3 = NullLibrary.Theme.Text,
+            TextSize = 13,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = button
+        })
+        local keyButton = create("TextButton", {
+            AnchorPoint = Vector2.new(1, 0.5),
+            AutoButtonColor = false,
+            BackgroundColor3 = NullLibrary.Theme.SurfaceAccent,
+            BackgroundTransparency = 0.2,
+            Position = UDim2.new(1, -8, 0.5, 0),
+            Size = UDim2.fromOffset(74, 26),
+            Text = "",
+            Parent = button
+        })
+        local keyButtonStroke = stroke(keyButton, 0.5, 1)
+        corner(keyButton, 6)
+        local keyLabel = create("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamSemibold,
+            Size = UDim2.fromScale(1, 1),
+            Text = bindKey.Name ~= "Unknown" and bindKey.Name or "...",
+            TextColor3 = NullLibrary.Theme.Text,
+            TextSize = 11,
+            Parent = keyButton
+        })
+
+        local controller = {Window = self.Window}
+        function controller:_setKeyCode(keyCode, skip)
+            bindKey = keyFromValue(keyCode) or Enum.KeyCode.Unknown
+            keyLabel.Text = bindKey.Name ~= "Unknown" and bindKey.Name or "..."
+            controller.Window.Flags[flag] = controller:Get()
+            if not skip and options.OnKeyChanged then task.spawn(options.OnKeyChanged, bindKey) end
+        end
+        function controller:SetKey(keyCode, skip)
+            controller:_setKeyCode(keyCode, skip)
+        end
+        function controller:Set(s, v, sk)
+            local newVal, skip = normalizeSetArgs(s, v, sk)
+            local parsedMode = mode
+            local parsedState = state
+            local parsedKey = nil
+
+            if type(newVal) == "table" then
+                local tag = newVal[1] or newVal["1"]
+                if tag == "__NULLUI_KEYBIND__" then
+                    parsedKey = keyFromValue(newVal[2] or newVal["2"])
+                    local m = tostring(newVal[3] or newVal["3"] or mode)
+                    parsedMode = m == "Hold" and "Hold" or "Toggle"
+                    parsedState = newVal[4] == true or newVal["4"] == true
+                else
+                    parsedKey = keyFromValue(newVal.Key or newVal.key)
+                    local m = tostring(newVal.Mode or newVal.mode or mode)
+                    parsedMode = m == "Hold" and "Hold" or "Toggle"
+                    if type(newVal.Value) == "boolean" then parsedState = newVal.Value end
+                    if type(newVal.State) == "boolean" then parsedState = newVal.State end
+                end
+            else
+                parsedKey = keyFromValue(newVal)
+            end
+
+            mode = parsedMode
+            state = parsedState
+            if parsedKey then controller:_setKeyCode(parsedKey, true) else controller:_setKeyCode(bindKey, true) end
+            controller.Window.Flags[flag] = controller:Get()
+            if not skip and options.Callback then task.spawn(options.Callback, state, bindKey, mode) end
+        end
+        function controller:Get()
+            return {Key = bindKey.Name, Mode = mode, Value = state}
+        end
+        function controller:Serialize()
+            return {"__NULLUI_KEYBIND__", bindKey.Name, mode, state}
+        end
+        function controller:Deserialize(savedValue, skip)
+            controller:Set(savedValue, skip == true)
+        end
+        function controller:Trigger(isPressed)
+            if bindKey == Enum.KeyCode.Unknown then return end
+            if mode == "Hold" then
+                state = isPressed == true
+                if options.Callback then task.spawn(options.Callback, state, bindKey, mode) end
+            elseif isPressed == true then
+                state = not state
+                if options.Callback then task.spawn(options.Callback, state, bindKey, mode) end
+            end
+            controller.Window.Flags[flag] = controller:Get()
+        end
+
+        bindTheme(function(theme)
+            button.BackgroundColor3 = theme.SurfaceRaised
+            outline.Color = theme.Stroke
+            titleLabel.TextColor3 = theme.Text
+            keyButton.BackgroundColor3 = theme.SurfaceAccent
+            keyButtonStroke.Color = theme.Stroke
+            keyLabel.TextColor3 = theme.Text
+        end)
+
+        keyButton.MouseButton1Click:Connect(function()
+            waitingInput = true
+            keyLabel.Text = "..."
+            local captureConn
+            captureConn = UIS.InputBegan:Connect(function(input, processed)
+                if processed then return end
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    controller:_setKeyCode(input.KeyCode)
+                    waitingInput = false
+                    if captureConn then captureConn:Disconnect() end
+                end
+            end)
+            task.delay(5, function()
+                if waitingInput then
+                    waitingInput = false
+                    keyLabel.Text = bindKey.Name ~= "Unknown" and bindKey.Name or "..."
+                    if captureConn then captureConn:Disconnect() end
+                end
+            end)
+        end)
+
+        self.Window:_registerKeybind(controller)
+        register(flag, controller, controller:Get())
+        local hasPending = self.Window.PendingConfig and self.Window.PendingConfig[flag] ~= nil
+        if not hasPending then
+            controller:Set({
+                Key = bindKey.Name,
+                Mode = mode,
+                Value = state,
+            }, true, true)
+        end
+        return controller
+    end
+
     function section:AddColorPicker(options)
         options = options or {}
         local flag = options.Flag or options.Text or "Color"
@@ -1247,7 +1404,7 @@ function NullLibrary:CreateWindow(options)
         MobileToggle = mobileToggle, TitleLabel = title, SubtitleLabel = subtitle, TitleIcon = titleIcon, SettingsButton = settingsButton, HideButton = hideButton, SettingsMenu = settingsMenu, Topbar = topbar, SidebarHeader = sidebarHeader, FloatingLayout = floatingLayout,
         Watermark = watermarkContainer, WatermarkText = watermarkTextLabel, WatermarkIcon = wmIcon, WatermarkBg = watermarkBg, WatermarkGui = watermarkGui, WatermarkEnabled = true,
         Badge = badge, BadgeLabel = badgeLabel, SettingsIcon = settingsIcon, HideIcon = hideIcon,
-        _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {}, _themeBindings = {},
+        _activePopup = nil, _activePopupAnchor = nil, _popupConnections = {}, _themeBindings = {}, _keybindControllers = {},
     }, Window)
 
     function window:_configDirectory() return self.ConfigFolder end
@@ -1294,6 +1451,11 @@ function NullLibrary:CreateWindow(options)
         table.insert(self._themeBindings, applyFn)
         local ok = pcall(applyFn, self.Library.Theme)
         if not ok then return end
+    end
+
+    function window:_registerKeybind(controller)
+        if type(controller) ~= "table" then return end
+        table.insert(self._keybindControllers, controller)
     end
 
     function window:_collectFlags()
@@ -1880,7 +2042,38 @@ function NullLibrary:CreateWindow(options)
 
     UIS.InputBegan:Connect(function(input, processed)
         if processed then return end
-        if input.KeyCode == window.ToggleKey then window:Toggle() return end
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == window.ToggleKey then
+            window:Toggle()
+            return
+        end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            for _, keybind in ipairs(window._keybindControllers) do
+                if keybind and keybind.Trigger and keybind.Get then
+                    local data = keybind:Get()
+                    local bound = keyFromValue(data and data.Key)
+                    if bound and bound ~= Enum.KeyCode.Unknown and input.KeyCode == bound then
+                        keybind:Trigger(true)
+                    end
+                end
+            end
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input, processed)
+        if processed then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            for _, keybind in ipairs(window._keybindControllers) do
+                if keybind and keybind.Trigger and keybind.Get then
+                    local data = keybind:Get()
+                    if data and data.Mode == "Hold" then
+                        local bound = keyFromValue(data.Key)
+                        if bound and bound ~= Enum.KeyCode.Unknown and input.KeyCode == bound then
+                            keybind:Trigger(false)
+                        end
+                    end
+                end
+            end
+        end
     end)
 
     window:SetThemeByName(window.ThemeName, true)
