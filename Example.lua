@@ -4,7 +4,7 @@ local Window = NullLib:CreateWindow({
     Name = "NullUI",
     Title = "Null UI",
     Subtitle = "yomkamadeit",
-    BadgeText = "v4.6",
+    BadgeText = "v4.7",
     Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
     WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
     ToggleKey = Enum.KeyCode.B,
@@ -21,7 +21,7 @@ local fps = 60
 RS.RenderStepped:Connect(function(deltaTime)
     fps = math.floor(1 / deltaTime)
     -- You can change the text, or you can use text + a new image: Window:SetWatermark("text", "link")
-    Window:SetWatermark(string.format("Null V3.7 | User: %s | FPS: %d", Player.Name, fps))
+    Window:SetWatermark(string.format("YomkaWasHere | User: %s | FPS: %d", Player.Name, fps))
 end)
 
 local MainTab = Window:CreateTab({
@@ -108,6 +108,17 @@ local EspColor = RightSection:AddColorPicker({
     DefaultAlpha = 0.85,
     Callback = function(color, alpha)
         print("ESP Color:", color, "Alpha:", alpha)
+    end
+})
+
+local EspKeybind = RightSection:AddKeybind({
+    Text = "ESP Keybind",
+    Flag = "ESPKeybind",
+    DefaultKey = Enum.KeyCode.H,
+    Mode = "Toggle",
+    DefaultState = false,
+    Callback = function(isEnabled, keyCode, mode)
+        print("ESP Keybind:", isEnabled, keyCode and keyCode.Name or "Unknown", mode)
     end
 })
 
