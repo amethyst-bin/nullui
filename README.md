@@ -8,9 +8,10 @@ A sleek, modern glassmorphism UI library for Roblox. Designed for performance, e
 * **Glassmorphism Design:** Translucent surfaces with blur-like effects.
 * **Theme System:** 10+ built-in presets (Arctic, Sunset, Midnight, etc.) and custom theme registration.
 * **Lucide Icons:** Integrated support for `Icon = "house" -- just type icon name here`.
+* **Custom UI Backgrounds:** Set/clear background image via URL, Roblox ID, or `rbxassetid://...`.
 * **Config System:** Built-in Save/Load functionality with JSON and Autoload support.
 * **Adaptive Layouts:** Move tabs to Top, Bottom, Left, or Right dynamically.
-* **Mobile Ready:** Responsive scaling and specialized touch-friendly toggles.
+* **Mobile Ready:** Responsive scaling, draggable show/hide button, and touch-friendly controls.
 
 ---
 
@@ -23,9 +24,13 @@ local Window = NullLib:CreateWindow({
     Name = "NullUI",
     Title = "Null UI",
     Subtitle = "yomkamadeit",
-    BadgeText = "v4.7",
+    BadgeText = "v5.0",
     Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
     WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
+    ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- mobile show/hide button icon
+    ShowHideButtonSize = 52, -- 38..72 recommended
+    -- BackgroundImage = "https://your-image.png", -- optional default background
+    -- BackgroundImageTransparency = 0.7, -- optional default background opacity
     ToggleKey = Enum.KeyCode.B,
     ConfigFolder = "NullUI",
     ConfigName = "ExampleConfig",
@@ -354,9 +359,19 @@ refreshAutoloadStatus()
 ### Window Methods
 * `Window:Toggle(bool)` - Show/Hide the UI.
 * `Window:SetThemeByName(string)` - Change theme on the fly.
+* `Window:SetBackground(source, options?)` - Set custom UI background (`source` can be URL, number ID, or `rbxassetid://...`).  
+  `options.Transparency` and `options.ScaleType` are optional.
+* `Window:GetBackground()` - Get current background settings table (`Source`, `Transparency`, `ScaleType`).
 * `Window:Notify(options)` - Push a notification.
 * `Window:SaveConfig(name)` - Save current flags to a file.
 * `Window:LoadConfig(name)` - Load settings from a file.
+
+### Background Quick Use
+```lua
+Window:SetBackground("image url") -- one arg supported
+Window:SetBackground("1234567890") -- Roblox asset id also supported
+Window:SetBackground("", true) -- clear background silently
+```
 
 ### Section Elements
 * **Label / Paragraph:** Simple text display.
