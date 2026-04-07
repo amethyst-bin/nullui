@@ -387,7 +387,7 @@ Window:SetBackground("", true) -- clear background silently
 ---
 
 ## Themes
-Available presets: `Null`, `Arctic`, `Ember`, `Forest`, `Sunset`, `Midnight`, `Mint`, `Snow`, `Blackout`, `Yoxi`.
+Available presets: `Null`, `Arctic`, `Ember`, `Forest`, `Sunset`, `Midnight`, `Mint`, `Snow`, `Blackout`, `Yoxi`, `Dark Blue`.
 
 ---
 
