@@ -7,8 +7,10 @@ local Window = NullLib:CreateWindow({
     BadgeText = "v5.0",
     Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
     WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
-    ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- change by string if u want
-    ShowHideButtonSize = 52, -- optional
+    ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- mobile show/hide button icon
+    ShowHideButtonSize = 52, -- 38..72 recommended
+    -- BackgroundImage = "https://your-image.png", -- optional default background
+    -- BackgroundImageTransparency = 0.7, -- optional default background opacity
     ToggleKey = Enum.KeyCode.B,
     ConfigFolder = "NullUI",
     ConfigName = "ExampleConfig",
@@ -113,6 +115,17 @@ local EspColor = RightSection:AddColorPicker({
     end
 })
 
+local EspKeybind = RightSection:AddKeybind({
+    Text = "ESP Keybind",
+    Flag = "ESPKeybind",
+    DefaultKey = Enum.KeyCode.H,
+    Mode = "Toggle",
+    DefaultState = false,
+    Callback = function(isEnabled, keyCode, mode)
+        print("ESP Keybind:", isEnabled, keyCode and keyCode.Name or "Unknown", mode)
+    end
+})
+
 local Mode = RightSection:AddDropdown({
     Text = "Target Mode",
     Flag = "TargetMode",
@@ -157,12 +170,6 @@ local ThemeSection = ConfigTab:CreateSection({
     Side = "Right"
 })
 
-local BackgroundSection = ConfigTab:CreateSection({
-    Title = "UI Background",
-    Description = "Set custom wallpaper for the UI",
-    Side = "Right"
-})
-
 local RawThemeNames = NullLib:ListThemes()
 local ThemeDisplayToRaw = {}
 local ThemeNames = {}
@@ -189,87 +196,6 @@ ThemeSection:AddButton({
         local selectedDisplay = tostring(ThemeDropdown:Get() or "Null (Default)")
         local rawName = ThemeDisplayToRaw[selectedDisplay] or "Null"
         Window:SetThemeByName(rawName)
-    end
-})
-
-local BackgroundInput = BackgroundSection:AddTextbox({
-    Placeholder = "URL / Roblox ID / rbxassetid://...",
-    Flag = "UIBackgroundSource",
-    Default = "",
-})
-
-local function trimText(value)
-    return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
-
-local function resolveBackgroundSource()
-    local typedSource = trimText(BackgroundInput:Get())
-    if typedSource ~= "" then
-        return typedSource
-    end
-
-    local current = Window:GetBackground()
-    return trimText(current and current.Source or "")
-end
-
-local BackgroundOpacity
-
-local function applyBackgroundLive(source, silent)
-    local opacityPercent = math.clamp(tonumber(BackgroundOpacity and BackgroundOpacity:Get()) or 30, 0, 100)
-    local targetSource = trimText(source)
-    if targetSource == "" then
-        targetSource = resolveBackgroundSource()
-    end
-    local ok = Window:SetBackground(targetSource, {
-        Transparency = 1 - (opacityPercent / 100),
-        ScaleType = Enum.ScaleType.Crop
-    }, silent)
-    return ok, targetSource
-end
-
-BackgroundOpacity = BackgroundSection:AddSlider({
-    Text = "Opacity (%)",
-    Flag = "UIBackgroundOpacity",
-    Min = 5,
-    Max = 100,
-    Default = 30,
-    Callback = function()
-        applyBackgroundLive(resolveBackgroundSource(), true)
-    end
-})
-
-BackgroundSection:AddButton({
-    Text = "Apply Background",
-    Icon = "image-plus",
-    Callback = function()
-        local source = resolveBackgroundSource()
-        if source == "" then
-            Window:Notify({
-                Title = "Background",
-                Content = "Type URL/ID in the textbox.",
-                Icon = "alert-circle",
-                Color = NullLib.Theme.Bad
-            })
-            return
-        end
-
-        local ok = applyBackgroundLive(source, false)
-        if not ok then
-            Window:Notify({
-                Title = "Background",
-                Content = "Failed to apply background.",
-                Icon = "alert-circle",
-                Color = NullLib.Theme.Bad
-            })
-        end
-    end
-})
-
-BackgroundSection:AddButton({
-    Text = "Clear Background",
-    Icon = "image-off",
-    Callback = function()
-        Window:SetBackground("")
     end
 })
 
@@ -400,23 +326,6 @@ ConfigSection:AddButton({
     Callback = function()
         Window:DisableAutoload()
         refreshAutoloadStatus()
-    end
-})
-
-ConfigSection:AddKeybind({
-    Text = "Toggle UI",
-    Flag = "UIToggleKeybind",
-    DefaultKey = Window.ToggleKey,
-    Mode = "Toggle",
-    Callback = function(_, bindKey)
-        if bindKey and bindKey ~= Enum.KeyCode.Unknown then
-            Window.ToggleKey = bindKey
-        end
-    end,
-    OnKeyChanged = function(bindKey)
-        if bindKey and bindKey ~= Enum.KeyCode.Unknown then
-            Window.ToggleKey = bindKey
-        end
     end
 })
 
