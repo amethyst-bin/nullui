@@ -4,7 +4,7 @@ local Window = NullLib:CreateWindow({
     Name = "NullUI",
     Title = "Null UI",
     Subtitle = "yomkamadeit",
-    BadgeText = "v5.1",
+    BadgeText = "v5.2",
     Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
     WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
     ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- change by string if u want
@@ -13,6 +13,7 @@ local Window = NullLib:CreateWindow({
     ConfigFolder = "NullUI",
     ConfigName = "ExampleConfig",
     TabPosition = "Bottom",
+    ShowTabTitle = true,
     WelcomeNotification = true
 })
 
@@ -47,6 +48,7 @@ local ConfigTab = Window:CreateTab({
 local LeftSection = MainTab:CreateSection({
     Title = "Mazafaka",
     Description = "blah blah blah",
+    Icon = "sparkles",
     Side = "Left" -- choose side here Left or Right
 })
 
