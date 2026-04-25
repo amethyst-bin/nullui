@@ -4,7 +4,7 @@ local Window = NullLib:CreateWindow({
     Name = "NullUI",
     Title = "Null UI",
     Subtitle = "yomkamadeit",
-    BadgeText = "v5.2",
+    BadgeText = "v5.3",
     Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
     WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
     ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- change by string if u want
@@ -76,6 +76,18 @@ local WalkSpeed = LeftSection:AddSlider({
     Default = 32,
     Callback = function(value)
         print("WalkSpeed:", value)
+    end
+})
+
+local AimSmoothness = LeftSection:AddSlider({
+    Text = "Aim Smoothness",
+    Flag = "AimSmoothness",
+    Decimals = true,
+    Min = 0.10,
+    Max = 1.00,
+    Default = 0.35,
+    Callback = function(value)
+        print("Aim Smoothness:", value)
     end
 })
 
