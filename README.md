@@ -6,7 +6,7 @@ A sleek, modern glassmorphism UI library for Roblox. Designed for performance, e
 
 ## Key Features
 * **Glassmorphism Design:** Translucent surfaces with blur-like effects.
-* **Theme System:** 10+ built-in presets (Arctic, Sunset, Midnight, etc.) and custom theme registration.
+* **Theme System:** 20+ built-in presets (Arctic, Sunset, Midnight, Ocean, RoseGold, Terminal, etc.) and custom theme registration.
 * **Lucide Icons:** Integrated support for `Icon = "house" -- just type icon name here`.
 * **Custom UI Backgrounds:** Set/clear background image via URL, Roblox ID, or `rbxassetid://...`.
 * **Config System:** Built-in Save/Load functionality with JSON and Autoload support.
@@ -24,17 +24,16 @@ local Window = NullLib:CreateWindow({
     Name = "NullUI",
     Title = "Null UI",
     Subtitle = "yomkamadeit",
-    BadgeText = "v5.0",
+    BadgeText = "v5.3",
     Icon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it
     WatermarkIcon = "https://i.postimg.cc/QxPqrLGq/image-Photoroom.png", -- u can change it too lol
-    ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- mobile show/hide button icon
-    ShowHideButtonSize = 52, -- 38..72 recommended
-    -- BackgroundImage = "https://your-image.png", -- optional default background
-    -- BackgroundImageTransparency = 0.7, -- optional default background opacity
+    ShowHideButtonIcon = "https://i.postimg.cc/8CWY0LCY/raw-68251a78f0683b2ed02ae20e25f976ea.png", -- change by string if u want
+    ShowHideButtonSize = 38, -- optional
     ToggleKey = Enum.KeyCode.B,
     ConfigFolder = "NullUI",
     ConfigName = "ExampleConfig",
     TabPosition = "Bottom",
+    ShowTabTitle = true,
     WelcomeNotification = true
 })
 
@@ -69,6 +68,7 @@ local ConfigTab = Window:CreateTab({
 local LeftSection = MainTab:CreateSection({
     Title = "Mazafaka",
     Description = "blah blah blah",
+    Icon = "sparkles",
     Side = "Left" -- choose side here Left or Right
 })
 
@@ -96,6 +96,18 @@ local WalkSpeed = LeftSection:AddSlider({
     Default = 32,
     Callback = function(value)
         print("WalkSpeed:", value)
+    end
+})
+
+local AimSmoothness = LeftSection:AddSlider({
+    Text = "Aim Smoothness",
+    Flag = "AimSmoothness",
+    Decimals = true,
+    Min = 0.10,
+    Max = 1.00,
+    Default = 0.35,
+    Callback = function(value)
+        print("Aim Smoothness:", value)
     end
 })
 
@@ -132,17 +144,6 @@ local EspColor = RightSection:AddColorPicker({
     DefaultAlpha = 0.85,
     Callback = function(color, alpha)
         print("ESP Color:", color, "Alpha:", alpha)
-    end
-})
-
-local EspKeybind = RightSection:AddKeybind({
-    Text = "ESP Keybind",
-    Flag = "ESPKeybind",
-    DefaultKey = Enum.KeyCode.H,
-    Mode = "Toggle",
-    DefaultState = false,
-    Callback = function(isEnabled, keyCode, mode)
-        print("ESP Keybind:", isEnabled, keyCode and keyCode.Name or "Unknown", mode)
     end
 })
 
@@ -190,6 +191,12 @@ local ThemeSection = ConfigTab:CreateSection({
     Side = "Right"
 })
 
+local BackgroundSection = ConfigTab:CreateSection({
+    Title = "UI Background",
+    Description = "Set custom wallpaper for the UI",
+    Side = "Right"
+})
+
 local RawThemeNames = NullLib:ListThemes()
 local ThemeDisplayToRaw = {}
 local ThemeNames = {}
@@ -216,6 +223,87 @@ ThemeSection:AddButton({
         local selectedDisplay = tostring(ThemeDropdown:Get() or "Null (Default)")
         local rawName = ThemeDisplayToRaw[selectedDisplay] or "Null"
         Window:SetThemeByName(rawName)
+    end
+})
+
+local BackgroundInput = BackgroundSection:AddTextbox({
+    Placeholder = "URL / Roblox ID / rbxassetid://...",
+    Flag = "UIBackgroundSource",
+    Default = "",
+})
+
+local function trimText(value)
+    return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function resolveBackgroundSource()
+    local typedSource = trimText(BackgroundInput:Get())
+    if typedSource ~= "" then
+        return typedSource
+    end
+
+    local current = Window:GetBackground()
+    return trimText(current and current.Source or "")
+end
+
+local BackgroundOpacity
+
+local function applyBackgroundLive(source, silent)
+    local opacityPercent = math.clamp(tonumber(BackgroundOpacity and BackgroundOpacity:Get()) or 30, 0, 100)
+    local targetSource = trimText(source)
+    if targetSource == "" then
+        targetSource = resolveBackgroundSource()
+    end
+    local ok = Window:SetBackground(targetSource, {
+        Transparency = 1 - (opacityPercent / 100),
+        ScaleType = Enum.ScaleType.Crop
+    }, silent)
+    return ok, targetSource
+end
+
+BackgroundOpacity = BackgroundSection:AddSlider({
+    Text = "Opacity (%)",
+    Flag = "UIBackgroundOpacity",
+    Min = 5,
+    Max = 100,
+    Default = 30,
+    Callback = function()
+        applyBackgroundLive(resolveBackgroundSource(), true)
+    end
+})
+
+BackgroundSection:AddButton({
+    Text = "Apply Background",
+    Icon = "image-plus",
+    Callback = function()
+        local source = resolveBackgroundSource()
+        if source == "" then
+            Window:Notify({
+                Title = "Background",
+                Content = "Type URL/ID in the textbox.",
+                Icon = "alert-circle",
+                Color = NullLib.Theme.Bad
+            })
+            return
+        end
+
+        local ok = applyBackgroundLive(source, false)
+        if not ok then
+            Window:Notify({
+                Title = "Background",
+                Content = "Failed to apply background.",
+                Icon = "alert-circle",
+                Color = NullLib.Theme.Bad
+            })
+        end
+    end
+})
+
+BackgroundSection:AddButton({
+    Text = "Clear Background",
+    Icon = "image-off",
+    Callback = function()
+        Window:SetBackground("")
     end
 })
 
@@ -349,6 +437,23 @@ ConfigSection:AddButton({
     end
 })
 
+ConfigSection:AddKeybind({
+    Text = "Toggle UI",
+    Flag = "UIToggleKeybind",
+    DefaultKey = Window.ToggleKey,
+    Mode = "Toggle",
+    Callback = function(_, bindKey)
+        if bindKey and bindKey ~= Enum.KeyCode.Unknown then
+            Window.ToggleKey = bindKey
+        end
+    end,
+    OnKeyChanged = function(bindKey)
+        if bindKey and bindKey ~= Enum.KeyCode.Unknown then
+            Window.ToggleKey = bindKey
+        end
+    end
+})
+
 refreshAutoloadStatus()
 ```
 
@@ -377,7 +482,7 @@ Window:SetBackground("", true) -- clear background silently
 * **Label / Paragraph:** Simple text display.
 * **Button:** Standard clickable action.
 * **Toggle:** Boolean switch (saves to flag).
-* **Slider:** Just a Slider lol.
+* **Slider:** Supports integer and decimal mode. Use `Decimals = true` with decimal `Min` / `Max` / `Default` values like `0.10`.
 * **Textbox:** String input.
 * **Dropdown:** Selectable list of options.
 * **ColorPicker:** Full RGBA support (saves as table/Hex).
@@ -387,7 +492,7 @@ Window:SetBackground("", true) -- clear background silently
 ---
 
 ## Themes
-Available presets: `Null`, `Arctic`, `Ember`, `Forest`, `Sunset`, `Midnight`, `Mint`, `Snow`, `Blackout`, `Yoxi`, `Dark Blue`.
+Available presets: `Null`, `Arctic`, `Ember`, `Forest`, `Sunset`, `Midnight`, `Mint`, `Snow`, `Blackout`, `Yoxi`, `Yoxi Blue`, `RoseGold`, `Ocean`, `Lavender`, `Cyber`, `Cherry`, `Matcha`, `Coral`, `Sapphire`, `Terminal`.
 
 ---
 
