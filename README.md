@@ -17,7 +17,7 @@ A sleek, modern glassmorphism UI library for Roblox. Designed for performance, e
 
 ## Example Script with All Features
 
-```lua
+```luau
 local NullLib = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ginzuss/nullui/refs/heads/main/NullUI.lua"))()
 
 local Window = NullLib:CreateWindow({
@@ -154,6 +154,17 @@ local Mode = RightSection:AddDropdown({
     Default = "Closest",
     Callback = function(value)
         print("Mode:", value)
+    end
+})
+
+local MultiTargetModes = RightSection:AddDropdown({
+    Text = "Target Modes",
+    Flag = "TargetModes",
+    Values = {"Closest", "Random", "Low HP", "Behind Wall", "Visible", "Distance"},
+    Default = {"Closest", "Visible"},
+    MultiSelect = true,
+    Callback = function(values, summary)
+        print("Target Modes:", summary, table.concat(values, ", "))
     end
 })
 
@@ -483,7 +494,7 @@ Window:SetBackground("", true) -- clear background silently
 * **Button:** Standard clickable action.
 * **Toggle:** Boolean switch (saves to flag).
 * **Slider:** Supports integer and decimal mode. Use `Decimals = true` with decimal `Min` / `Max` / `Default` values like `0.10`.
-* **Textbox:** String input.
+* **Textbox:** String input also support multi select. Use `MultiSelect = true`.
 * **Dropdown:** Selectable list of options.
 * **ColorPicker:** Full RGBA support (saves as table/Hex).
 * **Image:** Displays local assets, rbxassetids, or URLs.
