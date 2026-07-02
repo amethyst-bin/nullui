@@ -137,6 +137,17 @@ local Mode = RightSection:AddDropdown({
     end
 })
 
+local MultiTargetModes = RightSection:AddDropdown({
+    Text = "Target Modes",
+    Flag = "TargetModes",
+    Values = {"Closest", "Random", "Low HP", "Behind Wall", "Visible", "Distance"},
+    Default = {"Closest", "Visible"},
+    MultiSelect = true,
+    Callback = function(values, summary)
+        print("Target Modes:", summary, table.concat(values, ", "))
+    end
+})
+
 local Nickname = RightSection:AddTextbox({
     Placeholder = "Target Nickname...",
     Flag = "TargetNick",
